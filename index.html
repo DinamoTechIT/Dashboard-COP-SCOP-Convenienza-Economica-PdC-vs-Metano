@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard COP / SCOP & Risparmio Annuo PdC vs Metano - Daikin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background-color: #0b1120;
+      color: #f8fafc;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+    input[type=range] {
+      accent-color: #38bdf8;
+    }
+    .card-glass {
+      background: rgba(30, 41, 59, 0.80);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+    }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-6">
+
+  <div class="max-w-[1480px] mx-auto space-y-6">
+    
+    <!-- HEADER + SELETTORE MODALITÀ (COP PUNTUALE vs SCOP STAGIONALE) -->
+    <div class="card-glass rounded-2xl p-6 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+      <div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="px-3 py-1 text-xs font-bold uppercase tracking-wider bg-sky-500/20 text-sky-400 rounded-full border border-sky-500/30">Databook Daikin</span>
+          <span class="px-3 py-1 text-xs font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 rounded-full border border-amber-500/30">Analisi COP Bivalenza, % & €/Anno</span>
+        </div>
+        <h1 class="text-2xl md:text-3xl font-extrabold mt-2 text-white">Dashboard COP / SCOP & Risparmio Bolletta PdC vs Metano</h1>
+        <p class="text-slate-300 text-sm mt-1">Confronto <strong class="text-white">EBLA • ERLA • ERRA • EPRA • EPSK</strong> con calcolo del punto di pareggio (COP di Bivalenza), risparmio % e risparmio in €/anno</p>
+      </div>
+
+      <!-- Switch Modalità e Temperatura Esterna -->
+      <div class="flex flex-wrap gap-3 items-center bg-slate-900/95 p-3.5 rounded-xl border border-slate-700">
+        <div>
+          <label class="block text-xs uppercase tracking-wider text-sky-400 font-bold mb-1">Modalità di Analisi</label>
+          <select id="modeSelect" onchange="updateDashboard()" class="bg-slate-800 text-white text-sm font-bold rounded-lg px-3 py-2 border border-sky-500/50 focus:outline-none">
+            <option value="cop" selected>COP Puntuale (35°C → Max LWT)</option>
+            <option value="scop">SCOP Stagionale EN14825 (35°C → 55°C)</option>
+          </select>
+        </div>
+        <div id="tambBox">
+          <label class="block text-xs uppercase tracking-wider text-slate-300 font-bold mb-1">Temp. Esterna (Tamb)</label>
+          <select id="tambSelect" onchange="updateDashboard()" class="bg-slate-800 text-white text-sm font-semibold rounded-lg px-3 py-2 border border-slate-700 focus:outline-none">
+            <option value="-7">-7 °C (Clima Rigido)</option>
+            <option value="2">+2 °C (Inverno / Defrost)</option>
+            <option value="5" selected>+5 °C (Standard Richiesto)</option>
+            <option value="7">+7 °C (Nominale EN 14511)</option>
+            <option value="12">+12 °C (Mezza Stagione)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANNELLO PARAMETRI ECONOMICI & 3 GRUPPI DI PRESET -->
+    <div class="card-glass rounded-2xl p-6 border-l-4 border-l-amber-400">
+      
+      <!-- Riga Superiore: I 3 Box di Preset (Tariffe + Consumo Gas + Fotovoltaico) -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6 pb-5 border-b border-slate-800">
+        
+        <!-- GRUPPO PRESET 1: Tariffe Luce / Gas -->
+        <div class="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800">
+          <span class="block text-xs uppercase tracking-wider text-sky-400 font-extrabold mb-2">1. Preset Tariffe Luce / Gas (Finito Variabile):</span>
+          <div class="grid grid-cols-3 gap-2">
+            <button id="btn_tar_min" onclick="applyTariffPreset('min', 0.95, 86, 0.22)" class="px-2.5 py-2 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition text-center">
+              <div class="font-bold">📉 Minimo 5a</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">0,95€ | 0,22€</div>
+            </button>
+            <button id="btn_tar_avg" onclick="applyTariffPreset('avg', 1.20, 86, 0.31)" class="px-2.5 py-2 text-xs rounded-lg bg-sky-500/20 text-sky-300 border-2 border-sky-500/70 font-bold transition text-center">
+              <div>⚖️ Media Attuale</div>
+              <div class="text-[11px] text-sky-200 mt-0.5">1,20€ | 0,31€</div>
+            </button>
+            <button id="btn_tar_max" onclick="applyTariffPreset('max', 1.62, 86, 0.43)" class="px-2.5 py-2 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-800/60 transition text-center">
+              <div class="font-bold">📈 Picco ARERA</div>
+              <div class="text-[11px] text-amber-200/80 mt-0.5">1,62€ | 0,43€</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- GRUPPO PRESET 2: Consumo Annuo Gas Metano -->
+        <div class="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800">
+          <span class="block text-xs uppercase tracking-wider text-amber-400 font-extrabold mb-2">2. Preset Consumo Annuo Gas (Solo Risc.):</span>
+          <div class="grid grid-cols-3 gap-2">
+            <button id="btn_gas_700" onclick="applyGasConsumptionPreset(700)" class="px-2.5 py-2 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition text-center">
+              <div class="font-bold">🏠 Basso</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">700 Sm³/a</div>
+            </button>
+            <button id="btn_gas_1300" onclick="applyGasConsumptionPreset(1300)" class="px-2.5 py-2 text-xs rounded-lg bg-amber-500/20 text-amber-300 border-2 border-amber-500/70 font-bold transition text-center">
+              <div>🏡 Medio</div>
+              <div class="text-[11px] text-amber-200 mt-0.5">1.300 Sm³/a</div>
+            </button>
+            <button id="btn_gas_2200" onclick="applyGasConsumptionPreset(2200)" class="px-2.5 py-2 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-orange-300 border border-orange-800/60 transition text-center">
+              <div class="font-bold">🏰 Alto</div>
+              <div class="text-[11px] text-orange-200/80 mt-0.5">2.200 Sm³/a</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- GRUPPO PRESET 3: Autoconsumo Fotovoltaico Invernale -->
+        <div class="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800">
+          <span class="block text-xs uppercase tracking-wider text-emerald-400 font-extrabold mb-2">3. Preset Autoconsumo FV Invernale:</span>
+          <div class="grid grid-cols-4 gap-1.5">
+            <button id="btn_pv_0" onclick="applyPvPreset(0)" class="px-2 py-2 text-xs rounded-lg bg-emerald-500/20 text-emerald-300 border-2 border-emerald-500/70 font-bold transition text-center">
+              <div>No FV</div>
+              <div class="text-[11px] text-emerald-200 mt-0.5">0%</div>
+            </button>
+            <button id="btn_pv_20" onclick="applyPvPreset(20)" class="px-2 py-2 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition text-center">
+              <div class="font-bold">☀️ Solo FV</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">20%</div>
+            </button>
+            <button id="btn_pv_35" onclick="applyPvPreset(35)" class="px-2 py-2 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-800/60 transition text-center">
+              <div class="font-bold">🔋 FV+Batt</div>
+              <div class="text-[11px] text-emerald-200/80 mt-0.5">35%</div>
+            </button>
+            <button id="btn_pv_50" onclick="applyPvPreset(50)" class="px-2 py-2 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-700/60 transition text-center">
+              <div class="font-bold">⚡ FV XL</div>
+              <div class="text-[11px] text-emerald-300/80 mt-0.5">50%</div>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Riga Inferiore: I 5 Input + I 2 KPI Giganti -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3.5 items-stretch">
+        
+        <!-- Input 0: Consumo Annuo Gas Metano (Sm3/anno) -->
+        <div class="bg-amber-950/30 p-3.5 rounded-xl border-2 border-amber-500/50 flex flex-col justify-between">
+          <label class="block text-xs text-amber-300 font-extrabold uppercase">🔥 Consumo Annuo Gas</label>
+          <div class="flex items-center gap-1.5 mt-1.5">
+            <input id="gasYearlySm3" type="number" step="50" min="100" max="15000" value="1300" oninput="clearActiveGasBtn(); updateDashboard()" class="w-full bg-slate-900 text-amber-300 font-black text-2xl rounded-lg px-2.5 py-1.5 border border-amber-500/50 focus:outline-none">
+            <span class="text-xs text-amber-200 font-bold">Sm³</span>
+          </div>
+          <div class="text-xs text-slate-200 mt-1.5">Spesa Gas: <strong id="yearlyGasEuroDisplay" class="text-amber-300 text-sm font-extrabold">1.560 €/a</strong></div>
+        </div>
+
+        <!-- Input 1: Costo Metano -->
+        <div class="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <label class="block text-xs text-slate-300 font-bold uppercase">Costo Gas Metano</label>
+          <div class="flex items-center gap-1 mt-1.5">
+            <input id="gasPrice" type="number" step="0.05" min="0.30" max="3.50" value="1.20" oninput="clearActiveTariffBtn(); updateDashboard()" class="w-full bg-slate-800 text-white font-black text-2xl rounded-lg px-2.5 py-1.5 border border-slate-700">
+            <span class="text-xs text-slate-400 font-bold">€/Sm³</span>
+          </div>
+          <div class="text-xs text-slate-400 mt-1.5">PCS = <strong class="text-slate-300">9,6</strong> kWht/Sm³</div>
+        </div>
+
+        <!-- Input 2: Rendimento Caldaia -->
+        <div class="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <label class="block text-xs text-slate-300 font-bold uppercase">Efficienza Caldaia (η)</label>
+          <div class="flex items-center gap-1 mt-1.5">
+            <input id="boilerEff" type="number" step="1" min="0.50" max="105" value="86" oninput="updateDashboard()" class="w-full bg-slate-800 text-white font-black text-2xl rounded-lg px-2.5 py-1.5 border border-slate-700">
+            <span class="text-xs text-slate-400 font-bold">%</span>
+          </div>
+          <div class="text-xs text-slate-400 mt-1.5">Resa: <strong id="netGasKwh" class="text-slate-200">8,26</strong> kWht/Sm³</div>
+        </div>
+
+        <!-- Input 3: Costo Energia Elettrica -->
+        <div class="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <label class="block text-xs text-slate-300 font-bold uppercase">Costo Elettricità Rete</label>
+          <div class="flex items-center gap-1 mt-1.5">
+            <input id="elecPrice" type="number" step="0.01" min="0.05" max="1.00" value="0.31" oninput="clearActiveTariffBtn(); updateDashboard()" class="w-full bg-slate-800 text-white font-black text-2xl rounded-lg px-2.5 py-1.5 border border-slate-700">
+            <span class="text-xs text-slate-400 font-bold">€/kWhe</span>
+          </div>
+          <div class="text-xs text-slate-400 mt-1.5">Calore: <strong id="yearlyThermalKwhDisplay" class="text-slate-200">10.733</strong> kWht</div>
+        </div>
+
+        <!-- Input 4: % Fotovoltaico -->
+        <div class="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <label class="block text-xs text-slate-300 font-bold uppercase">% Autoprodotta FV</label>
+          <div class="flex items-center gap-1 mt-1.5">
+            <input id="pvShare" type="number" step="5" min="0" max="90" value="0" oninput="clearActivePvBtn(); updateDashboard()" class="w-full bg-slate-800 text-emerald-400 font-black text-2xl rounded-lg px-2.5 py-1.5 border border-slate-700">
+            <span class="text-xs text-slate-400 font-bold">%</span>
+          </div>
+          <div class="text-xs text-slate-400 mt-1.5">Netto: <strong id="netElecDisplay" class="text-emerald-300 font-bold">0,310 €/kWhe</strong></div>
+        </div>
+
+        <!-- Output 1: Costo kWht Gas -->
+        <div class="bg-amber-950/40 p-3.5 rounded-xl border border-amber-500/40 flex flex-col justify-between">
+          <div class="text-xs text-amber-300 font-extrabold uppercase">Costo kWht Gas</div>
+          <div id="gasKwhtCostDisplay" class="text-3xl font-black text-white my-1">0,145 €</div>
+          <div class="text-xs text-amber-200/90 font-medium">Benchmark Caldaia</div>
+        </div>
+
+        <!-- Output 2: COP DI BIVALENZA -->
+        <div class="bg-rose-950/50 p-3.5 rounded-xl border-2 border-rose-500/80 flex flex-col justify-between">
+          <div class="text-xs text-rose-300 font-extrabold uppercase tracking-wider">🎯 COP Bivalenza</div>
+          <div id="copBivDisplay" class="text-4xl font-black text-rose-400 my-0.5">2,13</div>
+          <div class="text-xs text-rose-200 font-medium">Soglia Pareggio Gas</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- CONTROLLO SLIDER LWT E SELETTORI TAGLIA -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- SLIDER LWT -->
+      <div class="card-glass rounded-2xl p-6 lg:col-span-2 flex flex-col justify-between">
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <div>
+              <span class="text-lg font-extrabold text-white">Temperatura di Mandata Acqua (LWT / LWC)</span>
+              <p id="scopWarningBanner" class="hidden text-xs text-amber-400 mt-0.5">⚠️ Nota Normativa EN 14825: Lo SCOP è certificato nei databook solo fino a 55°C. Oltre 55°C viene mostrata la stima stagionale estrapolata (tratteggiata).</p>
+            </div>
+            <div class="flex items-baseline gap-3">
+              <span id="lwtDisplay" class="text-5xl font-black text-sky-400">45°C</span>
+              <span id="emitterBadge" class="text-xs font-bold px-3 py-1 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">Fan Coil / Radiatori BT</span>
+            </div>
+          </div>
+          
+          <input id="lwtSlider" type="range" min="35" max="75" step="1" value="45" class="w-full h-4 bg-slate-700 rounded-lg cursor-pointer my-4">
+          
+          <div class="flex justify-between text-xs text-slate-300 font-bold px-1">
+            <span class="text-emerald-400">35°C (Radiante)</span>
+            <span>45°C (Fan Coil)</span>
+            <span class="text-amber-300">55°C (Radiatori MT)</span>
+            <span class="text-sky-400">60°C (Max EBLA/ERLA)</span>
+            <span class="text-amber-400">65°C (Max ERRA)</span>
+            <span class="text-orange-400">70°C (Max EPRA)</span>
+            <span class="text-rose-400">75°C (Max EPSK)</span>
+          </div>
+        </div>
+
+        <div class="mt-5 pt-4 border-t border-slate-800 flex flex-wrap gap-2 items-center justify-between">
+          <span class="text-xs text-slate-300 font-bold">Salta a LWT:</span>
+          <div class="flex flex-wrap gap-1.5">
+            <button onclick="setLWT(35)" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-slate-700">35°C (Radiante)</button>
+            <button onclick="setLWT(45)" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">45°C (Fan Coil)</button>
+            <button onclick="setLWT(55)" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-800/60">55°C (Radiatori MT)</button>
+            <button onclick="setLWT(60)" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-300 border border-sky-900">60°C (Max BT)</button>
+            <button onclick="setLWT(65)" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-900">65°C (Max ERRA)</button>
+            <button onclick="setLWT(70)" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-orange-400 border border-orange-900">70°C (Max EPRA)</button>
+            <button onclick="setLWT(75)" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-rose-400 border border-rose-900">75°C (Max EPSK)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SELETTORI TAGLIA MODELLI -->
+      <div class="card-glass rounded-2xl p-6 space-y-2.5">
+        <h3 class="text-sm font-extrabold text-white border-b border-slate-800 pb-2">Taglie Databook a Confronto</h3>
+        <div class="grid grid-cols-2 items-center gap-2.5 text-xs">
+          <label class="text-sky-400 font-bold">1. EBLA (Monoblocco):</label>
+          <select id="size_ebla" onchange="updateDashboard()" class="bg-slate-800 text-white font-semibold rounded-lg px-2.5 py-1.5 border border-slate-700">
+            <option value="09">EBLA09D (9 kW)</option>
+            <option value="11" selected>EBLA11D (11 kW)</option>
+            <option value="14">EBLA14D (14 kW)</option>
+            <option value="16">EBLA16D (16 kW)</option>
+          </select>
+
+          <label class="text-indigo-400 font-bold">2. ERLA (Split LT):</label>
+          <select id="size_erla" onchange="updateDashboard()" class="bg-slate-800 text-white font-semibold rounded-lg px-2.5 py-1.5 border border-slate-700">
+            <option value="11" selected>ERLA11D (11 kW)</option>
+            <option value="14">ERLA14D (14 kW)</option>
+            <option value="16">ERLA16D (16 kW)</option>
+          </select>
+
+          <label class="text-amber-400 font-bold">3. ERRA (Split MT):</label>
+          <select id="size_erra" onchange="updateDashboard()" class="bg-slate-800 text-white font-semibold rounded-lg px-2.5 py-1.5 border border-slate-700">
+            <option value="08">ERRA08E (8 kW)</option>
+            <option value="10" selected>ERRA10E (10 kW)</option>
+            <option value="12">ERRA12E (12 kW)</option>
+          </select>
+
+          <label class="text-orange-400 font-bold">4. EPRA (Split HT R32):</label>
+          <select id="size_epra" onchange="updateDashboard()" class="bg-slate-800 text-white font-semibold rounded-lg px-2.5 py-1.5 border border-slate-700">
+            <option value="14" selected>EPRA14D (14 kW)</option>
+            <option value="16">EPRA16D (16 kW)</option>
+            <option value="18">EPRA18D (18 kW)</option>
+          </select>
+
+          <label class="text-emerald-400 font-bold">5. EPSK (Altherma 4 R290):</label>
+          <select id="size_epsk" onchange="updateDashboard()" class="bg-slate-800 text-white font-semibold rounded-lg px-2.5 py-1.5 border border-slate-700">
+            <option value="06">EPSK06A (6 kW - Max 70°C)</option>
+            <option value="08">EPSK08A (8 kW - Max 75°C)</option>
+            <option value="10" selected>EPSK10A (10 kW - Max 75°C)</option>
+            <option value="12">EPSK12A (12 kW - Max 75°C)</option>
+            <option value="14">EPSK14A (14 kW - Max 75°C)</option>
+          </select>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- KPI CARDS DELLE 5 POMPE DI CALORE (CON FONT EXTRA-LARGE PER % E €/ANNO) -->
+    <div id="kpiContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"></div>
+
+    <!-- GRAFICI: CURVA COP/SCOP CON SOGLIA BIVALENZA + GRAFICO SPESA ANNUA -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Grafico Lineare con Linea Orizzontale di Bivalenza -->
+      <div class="card-glass rounded-2xl p-6 lg:col-span-2">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h2 id="mainChartTitle" class="text-lg font-bold text-white">Curva COP vs Temperatura di Mandata e Soglia di Bivalenza</h2>
+            <p id="mainChartSub" class="text-xs text-slate-400">La linea rossa tratteggiata rappresenta il COP di Bivalenza: sopra conviene la PdC, sotto conviene il Gas Metano</p>
+          </div>
+        </div>
+        <div class="relative h-96">
+          <canvas id="copChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Grafico Spesa Annua (€/anno) rispetto al Metano -->
+      <div class="card-glass rounded-2xl p-6 flex flex-col justify-between">
+        <div>
+          <h2 class="text-lg font-bold text-white">Spesa Annua Riscaldamento (€/anno)</h2>
+          <p id="econChartSub" class="text-xs text-slate-400 mb-4">Confronto spesa energetica annua alla temperatura di mandata selezionata</p>
+          <div class="relative h-72">
+            <canvas id="econChart"></canvas>
+          </div>
+        </div>
+        <div id="bivalenceSummaryBox" class="mt-4 p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-slate-300 space-y-1">
+          <!-- Popolato via JS -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- TABELLA RIEPILOGATIVA SCOP CERTIFICATI (35°C vs 55°C) + RISPARMIO IN % E €/ANNO -->
+    <div class="card-glass rounded-2xl p-6 overflow-x-auto">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
+        <div>
+          <h2 class="text-lg font-bold text-white">Riepilogo Stagionale Certificato (SCOP 35°C vs 55°C) & Risparmio Annuo in Bolletta (% e €/anno)</h2>
+          <p class="text-xs text-slate-400">Valori ufficiali EN 14825 (Clima Medio) estratti dai databook Daikin applicati al tuo consumo annuo di metano</p>
+        </div>
+      </div>
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="border-b border-slate-700 text-slate-200 bg-slate-800/80 text-xs uppercase font-bold">
+            <th class="py-3.5 px-4">Modello</th>
+            <th class="py-3.5 px-3 text-center">LWT Max</th>
+            <th class="py-3.5 px-3 text-center bg-emerald-950/30 text-emerald-300">SCOP 35°C</th>
+            <th class="py-3.5 px-3 text-center bg-emerald-950/30 text-emerald-300">Costo @35°C</th>
+            <th class="py-3.5 px-3 text-center bg-emerald-950/30 text-emerald-300">Risparmio @35°C (% e €/anno)</th>
+            <th class="py-3.5 px-3 text-center bg-amber-950/30 text-amber-300">SCOP 55°C</th>
+            <th class="py-3.5 px-3 text-center bg-amber-950/30 text-amber-300">Costo @55°C</th>
+            <th class="py-3.5 px-3 text-center bg-amber-950/30 text-amber-300">Risparmio @55°C (% e €/anno)</th>
+            <th class="py-3.5 px-3 text-center bg-rose-950/30 text-rose-300">LWT Limite Convenienza</th>
+          </tr>
+        </thead>
+        <tbody id="scopTableBody" class="divide-y divide-slate-800 text-sm"></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <script>
+    const heatPumps = {
+      ebla: {
+        id: 'ebla', name: 'EBLA', fullName: 'Altherma 3 M (Monoblocco R32)', refrigerant: 'R-32',
+        color: '#38bdf8', bgLight: 'rgba(56, 189, 248, 0.15)',
+        sizes: {
+          '09': { label: 'EBLA09D (9 kW)',  maxLWT: 60, scop35: 4.55, scop55: 3.26, cop7: { 35: 4.91, 45: 3.71, 55: 2.85, 60: 2.48 } },
+          '11': { label: 'EBLA11D (11 kW)', maxLWT: 60, scop35: 4.52, scop55: 3.32, cop7: { 35: 4.83, 45: 3.66, 55: 2.82, 60: 2.45 } },
+          '14': { label: 'EBLA14D (14 kW)', maxLWT: 60, scop35: 4.54, scop55: 3.36, cop7: { 35: 4.87, 45: 3.64, 55: 2.80, 60: 2.43 } },
+          '16': { label: 'EBLA16D (16 kW)', maxLWT: 60, scop35: 4.49, scop55: 3.31, cop7: { 35: 4.53, 45: 3.51, 55: 2.72, 60: 2.38 } }
+        }
+      },
+      erla: {
+        id: 'erla', name: 'ERLA', fullName: 'Altherma 3 R (Split BT R32)', refrigerant: 'R-32',
+        color: '#818cf8', bgLight: 'rgba(129, 140, 248, 0.15)',
+        sizes: {
+          '11': { label: 'ERLA11D (11 kW)', maxLWT: 60, scop35: 4.72, scop55: 3.27, cop7: { 35: 4.83, 45: 3.66, 55: 2.84, 60: 2.47 } },
+          '14': { label: 'ERLA14D (14 kW)', maxLWT: 60, scop35: 4.68, scop55: 3.26, cop7: { 35: 4.87, 45: 3.64, 55: 2.82, 60: 2.45 } },
+          '16': { label: 'ERLA16D (16 kW)', maxLWT: 60, scop35: 4.68, scop55: 3.35, cop7: { 35: 4.53, 45: 3.51, 55: 2.74, 60: 2.39 } }
+        }
+      },
+      erra: {
+        id: 'erra', name: 'ERRA', fullName: 'Altherma 3 R MT (Split Media T.)', refrigerant: 'R-32',
+        color: '#fbbf24', bgLight: 'rgba(251, 191, 36, 0.15)',
+        sizes: {
+          '08': { label: 'ERRA08E (8 kW)',  maxLWT: 65, scop35: 4.56, scop55: 3.31, cop7: { 35: 4.92, 45: 3.80, 55: 2.98, 60: 2.62, 65: 2.30 } },
+          '10': { label: 'ERRA10E (10 kW)', maxLWT: 65, scop35: 4.60, scop55: 3.36, cop7: { 35: 4.92, 45: 3.78, 55: 2.96, 60: 2.60, 65: 2.29 } },
+          '12': { label: 'ERRA12E (12 kW)', maxLWT: 65, scop35: 4.63, scop55: 3.41, cop7: { 35: 4.85, 45: 3.73, 55: 2.92, 60: 2.57, 65: 2.26 } }
+        }
+      },
+      epra: {
+        id: 'epra', name: 'EPRA', fullName: 'Altherma 3 H HT (Hydrosplit 70°C)', refrigerant: 'R-32',
+        color: '#f97316', bgLight: 'rgba(249, 115, 22, 0.15)',
+        sizes: {
+          '14': { label: 'EPRA14D (14 kW)', maxLWT: 70, scop35: 4.81, scop55: 3.58, cop7: { 35: 5.00, 45: 3.89, 55: 3.08, 60: 2.73, 65: 2.42, 70: 2.14 } },
+          '16': { label: 'EPRA16D (16 kW)', maxLWT: 70, scop35: 4.74, scop55: 3.56, cop7: { 35: 5.00, 45: 3.87, 55: 3.06, 60: 2.71, 65: 2.40, 70: 2.12 } },
+          '18': { label: 'EPRA18D (18 kW)', maxLWT: 70, scop35: 4.74, scop55: 3.58, cop7: { 35: 4.92, 45: 3.81, 55: 3.01, 60: 2.67, 65: 2.36, 70: 2.09 } }
+        }
+      },
+      epsk: {
+        id: 'epsk', name: 'EPSK', fullName: 'Altherma 4 H (Hydrosplit R290 75°C)', refrigerant: 'R-290',
+        color: '#10b981', bgLight: 'rgba(16, 185, 129, 0.15)',
+        sizes: {
+          '06': { label: 'EPSK06A (6 kW)',  maxLWT: 70, scop35: 4.96, scop55: 3.78, cop7: { 35: 5.19, 45: 4.08, 55: 3.28, 60: 2.94, 65: 2.63, 70: 2.35 } },
+          '08': { label: 'EPSK08A (8 kW)',  maxLWT: 75, scop35: 5.00, scop55: 3.86, cop7: { 35: 5.15, 45: 4.05, 55: 3.26, 60: 2.93, 65: 2.63, 70: 2.35, 75: 2.08 } },
+          '10': { label: 'EPSK10A (10 kW)', maxLWT: 75, scop35: 5.05, scop55: 3.92, cop7: { 35: 5.18, 45: 4.08, 55: 3.29, 60: 2.95, 65: 2.65, 70: 2.37, 75: 2.10 } },
+          '12': { label: 'EPSK12A (12 kW)', maxLWT: 75, scop35: 5.02, scop55: 3.90, cop7: { 35: 5.14, 45: 4.06, 55: 3.28, 60: 2.94, 65: 2.64, 70: 2.36, 75: 2.09 } },
+          '14': { label: 'EPSK14A (14 kW)', maxLWT: 75, scop35: 4.88, scop55: 3.80, cop7: { 35: 4.96, 45: 3.92, 55: 3.16, 60: 2.84, 65: 2.55, 70: 2.28, 75: 2.02 } }
+        }
+      }
+    };
+
+    const tambMultipliers = {
+      '12': { base: 1.24, highTempPenalty: 1.03 },
+      '7':  { base: 1.00, highTempPenalty: 1.00 },
+      '5':  { base: 0.945, highTempPenalty: 0.99 },
+      '2':  { base: 0.815, highTempPenalty: 0.97 },
+      '-7': { base: 0.635, highTempPenalty: 0.93 }
+    };
+
+    function getCOP(seriesKey, sizeKey, lwt, tamb) {
+      const series = heatPumps[seriesKey];
+      const model = series.sizes[sizeKey];
+      if (lwt > model.maxLWT) return null;
+
+      const points = Object.keys(model.cop7).map(Number).sort((a, b) => a - b);
+      let copAt7 = null;
+      for (let i = 0; i < points.length - 1; i++) {
+        const t1 = points[i], t2 = points[i + 1];
+        if (lwt >= t1 && lwt <= t2) {
+          copAt7 = model.cop7[t1] + ((lwt - t1) / (t2 - t1)) * (model.cop7[t2] - model.cop7[t1]);
+          break;
+        }
+      }
+      const mult = tambMultipliers[String(tamb)];
+      const liftFactor = 1 - ((lwt - 35) / 40) * (1 - mult.highTempPenalty);
+      const techBonus = (seriesKey === 'epsk' ? 1.015 : (seriesKey === 'epra' ? 1.008 : 1.0));
+      return Number((copAt7 * mult.base * liftFactor * techBonus).toFixed(2));
+    }
+
+    function getSCOP(seriesKey, sizeKey, lwt) {
+      const model = heatPumps[seriesKey].sizes[sizeKey];
+      if (lwt > model.maxLWT) return null;
+
+      if (lwt <= 55) {
+        const tRatio = (lwt - 35) / 20;
+        const curvedRatio = Math.pow(tRatio, 0.92);
+        const val = model.scop35 - curvedRatio * (model.scop35 - model.scop55);
+        return Number(val.toFixed(2));
+      } else {
+        const cop55 = model.cop7[55];
+        const copLwt = getCOP(seriesKey, sizeKey, lwt, 7);
+        const projected = model.scop55 * (copLwt / cop55);
+        return Number(projected.toFixed(2));
+      }
+    }
+
+    function getActiveEfficiency(seriesKey, sizeKey, lwt, tamb, mode) {
+      return mode === 'scop' ? getSCOP(seriesKey, sizeKey, lwt) : getCOP(seriesKey, sizeKey, lwt, tamb);
+    }
+
+    function findMaxConvenientLWT(seriesKey, sizeKey, tamb, mode, copBiv) {
+      const maxLwt = heatPumps[seriesKey].sizes[sizeKey].maxLWT;
+      let lastGoodLwt = null;
+      for (let t = 35; t <= maxLwt; t++) {
+        const eff = getActiveEfficiency(seriesKey, sizeKey, t, tamb, mode);
+        if (eff !== null && eff >= copBiv) {
+          lastGoodLwt = t;
+        }
+      }
+      return lastGoodLwt;
+    }
+
+    function formatEuro(num) {
+      const sign = num >= 0 ? '+' : '-';
+      const absVal = Math.round(Math.abs(num)).toLocaleString('it-IT');
+      return `${sign}${absVal} €`;
+    }
+
+    let copChartInstance = null;
+    let econChartInstance = null;
+
+    function setLWT(val) {
+      document.getElementById('lwtSlider').value = val;
+      updateDashboard();
+    }
+
+    // Preset Tariffe
+    function applyTariffPreset(id, gas, eff, elec) {
+      document.getElementById('gasPrice').value = gas.toFixed(2);
+      document.getElementById('boilerEff').value = eff;
+      document.getElementById('elecPrice').value = elec.toFixed(2);
+
+      ['min', 'avg', 'max'].forEach(k => {
+        const btn = document.getElementById(`btn_tar_${k}`);
+        if (k === id) {
+          btn.className = 'px-2.5 py-2 text-xs rounded-lg bg-sky-500/20 text-sky-300 border-2 border-sky-500/70 font-bold transition text-center';
+        } else {
+          btn.className = 'px-2.5 py-2 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition text-center';
+        }
+      });
+      updateDashboard();
+    }
+
+    function clearActiveTariffBtn() {
+      ['min', 'avg', 'max'].forEach(k => {
+        document.getElementById(`btn_tar_${k}`).className = 'px-2.5 py-2 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition text-center';
+      });
+    }
+
+    // Preset Consumo Annuo Gas (700, 1300, 2200 Sm3)
+    function applyGasConsumptionPreset(sm3Val) {
+      document.getElementById('gasYearlySm3').value = sm3Val;
+      [700, 1300, 2200].forEach(val => {
+        const btn = document.getElementById(`btn_gas_${val}`);
+        if (val === sm3Val) {
+          btn.className = 'px-2.5 py-2 text-xs rounded-lg bg-amber-500/20 text-amber-300 border-2 border-amber-500/70 font-bold transition text-center';
+        } else {
+          btn.className = 'px-2.5 py-2 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition text-center';
+        }
+      });
+      updateDashboard();
+    }
+
+    function clearActiveGasBtn() {
+      [700, 1300, 2200].forEach(val => {
+        document.getElementById(`btn_gas_${val}`).className = 'px-2.5 py-2 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition text-center';
+      });
+    }
+
+    // Preset Fotovoltaico
+    function applyPvPreset(pvVal) {
+      document.getElementById('pvShare').value = pvVal;
+      [0, 20, 35, 50].forEach(val => {
+        const btn = document.getElementById(`btn_pv_${val}`);
+        if (val === pvVal) {
+          btn.className = 'px-2 py-2 text-xs rounded-lg bg-emerald-500/20 text-emerald-300 border-2 border-emerald-500/70 font-bold transition text-center';
+        } else {
+          btn.className = 'px-2 py-2 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition text-center';
+        }
+      });
+      updateDashboard();
+    }
+
+    function clearActivePvBtn() {
+      [0, 20, 35, 50].forEach(val => {
+        document.getElementById(`btn_pv_${val}`).className = 'px-2 py-2 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition text-center';
+      });
+    }
+
+    function getEmitterDescription(lwt) {
+      if (lwt <= 38) return { text: 'Impianto Radiante (35°C)', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' };
+      if (lwt <= 48) return { text: 'Fan Coil / Radiatori BT', color: 'bg-sky-500/20 text-sky-300 border-sky-500/30' };
+      if (lwt <= 55) return { text: 'Radiatori Media Temp. (≤55°C)', color: 'bg-amber-500/20 text-amber-300 border-amber-500/30' };
+      if (lwt <= 65) return { text: 'Radiatori Alta Temp. (60-65°C)', color: 'bg-orange-500/20 text-orange-300 border-orange-500/30' };
+      return { text: 'Radiatori Ghisa (>65°C)', color: 'bg-rose-500/20 text-rose-300 border-rose-500/30' };
+    }
+
+    function updateDashboard() {
+      const mode = document.getElementById('modeSelect').value;
+      const lwt = Number(document.getElementById('lwtSlider').value);
+      const tamb = Number(document.getElementById('tambSelect').value);
+
+      document.getElementById('tambBox').style.opacity = mode === 'scop' ? '0.4' : '1';
+      document.getElementById('tambSelect').disabled = mode === 'scop';
+      document.getElementById('scopWarningBanner').className = mode === 'scop' ? 'block text-xs text-amber-400 mt-1' : 'hidden';
+
+      const gasYearlySm3 = Number(document.getElementById('gasYearlySm3').value) || 1300;
+      const gasPrice = Number(document.getElementById('gasPrice').value) || 1.20;
+      
+      let rawEff = Number(document.getElementById('boilerEff').value) || 86;
+      const boilerEff = rawEff <= 1.5 ? rawEff : (rawEff / 100);
+
+      const elecPrice = Number(document.getElementById('elecPrice').value) || 0.31;
+
+      let rawPv = Number(document.getElementById('pvShare').value) || 0;
+      const pvShare = (rawPv > 0 && rawPv < 1) ? rawPv : (rawPv / 100);
+
+      const pcsGas = 9.6; // kWht/Sm3
+
+      const netKwhPerSm3 = pcsGas * boilerEff;
+      const gasCostPerKwht = gasPrice / netKwhPerSm3;
+      const netElecPrice = elecPrice * (1 - pvShare);
+      const copBivalenza = netElecPrice / gasCostPerKwht;
+
+      const yearlyGasCostEuro = gasYearlySm3 * gasPrice;
+      const yearlyThermalKwh = gasYearlySm3 * netKwhPerSm3;
+
+      document.getElementById('yearlyGasEuroDisplay').textContent = `${Math.round(yearlyGasCostEuro).toLocaleString('it-IT')} €/a`;
+      document.getElementById('yearlyThermalKwhDisplay').textContent = Math.round(yearlyThermalKwh).toLocaleString('it-IT');
+      document.getElementById('netGasKwh').textContent = netKwhPerSm3.toFixed(2);
+      document.getElementById('netElecDisplay').textContent = `${netElecPrice.toFixed(3)} €/kWhe`;
+      document.getElementById('gasKwhtCostDisplay').textContent = `${gasCostPerKwht.toFixed(3)} €`;
+      document.getElementById('copBivDisplay').textContent = copBivalenza.toFixed(2);
+
+      document.getElementById('lwtDisplay').textContent = `${lwt}°C`;
+      const emitter = getEmitterDescription(lwt);
+      const badge = document.getElementById('emitterBadge');
+      badge.textContent = emitter.text;
+      badge.className = `text-xs font-bold px-3 py-1 rounded-full border ${emitter.color}`;
+
+      const selectedSizes = {
+        ebla: document.getElementById('size_ebla').value,
+        erla: document.getElementById('size_erla').value,
+        erra: document.getElementById('size_erra').value,
+        epra: document.getElementById('size_epra').value,
+        epsk: document.getElementById('size_epsk').value
+      };
+
+      const effLabel = mode === 'scop' ? (lwt <= 55 ? 'SCOP' : 'SCOP (Stima)') : 'COP';
+
+      // 1. AGGIORNA KPI CARDS (CON % E €/ANNO GIGANTI)
+      const kpiContainer = document.getElementById('kpiContainer');
+      kpiContainer.innerHTML = '';
+
+      Object.keys(heatPumps).forEach(key => {
+        const hp = heatPumps[key];
+        const sizeKey = selectedSizes[key];
+        const modelInfo = hp.sizes[sizeKey];
+        const eff = getActiveEfficiency(key, sizeKey, lwt, tamb, mode);
+
+        if (eff !== null) {
+          const pdcCostKwht = netElecPrice / eff;
+          const savingPct = ((1 - (pdcCostKwht / gasCostPerKwht)) * 100);
+          const yearlyPdcCostEuro = yearlyThermalKwh * pdcCostKwht;
+          const yearlySavingEuro = yearlyGasCostEuro - yearlyPdcCostEuro;
+          const isConvenient = eff >= copBivalenza;
+
+          kpiContainer.innerHTML += `
+            <div class="card-glass rounded-2xl p-4 border-t-4 flex flex-col justify-between transition hover:scale-[1.01]" style="border-top-color: ${hp.color}">
+              <div>
+                <div class="flex justify-between items-start">
+                  <div>
+                    <span class="text-sm font-black uppercase px-2.5 py-0.5 rounded" style="background:${hp.bgLight}; color:${hp.color}">${hp.name}</span>
+                    <h4 class="text-xs text-slate-300 mt-1.5 font-bold">${modelInfo.label}</h4>
+                  </div>
+                  <span class="text-xs px-2 py-0.5 rounded font-bold ${isConvenient ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'}">
+                    ${isConvenient ? '✓ Conveniente' : '✗ Sotto Biv.'}
+                  </span>
+                </div>
+
+                <!-- COP/SCOP e Costo Unitario €/kWht -->
+                <div class="mt-3 flex items-baseline justify-between border-b border-slate-800 pb-3">
+                  <div>
+                    <div class="text-xs text-slate-400 font-semibold">${effLabel} @ ${lwt}°C</div>
+                    <div class="text-4xl font-black text-white mt-0.5">${eff.toFixed(2)}</div>
+                  </div>
+                  <div class="text-right">
+                    <div class="text-xs text-slate-400 font-semibold">Costo kWht</div>
+                    <div class="text-2xl font-extrabold text-slate-100 mt-0.5">${pdcCostKwht.toFixed(3)} €</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- BOX GIGANTE AD ALTO CONTRASTO: RISPARMIO % E RISPARMIO €/ANNO -->
+              <div class="mt-3 p-3.5 rounded-xl ${savingPct >= 0 ? 'bg-emerald-950/50 border-2 border-emerald-500/50' : 'bg-rose-950/50 border-2 border-rose-500/50'}">
+                <div class="flex justify-between items-center">
+                  <span class="text-xs font-extrabold uppercase tracking-wider ${savingPct >= 0 ? 'text-emerald-300' : 'text-rose-300'}">Risparmio</span>
+                  <span class="text-3xl xl:text-4xl font-black tracking-tight ${savingPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+                    ${savingPct >= 0 ? `+${savingPct.toFixed(0)}%` : `${savingPct.toFixed(0)}%`}
+                  </span>
+                </div>
+                <div class="mt-2 pt-2 border-t ${savingPct >= 0 ? 'border-emerald-800/80' : 'border-rose-800/80'} flex justify-between items-baseline">
+                  <span class="text-xs font-bold text-slate-300">Annui:</span>
+                  <span class="text-2xl xl:text-3xl font-black text-white">
+                    ${formatEuro(yearlySavingEuro)}<span class="text-xs font-semibold text-slate-300">/a</span>
+                  </span>
+                </div>
+                <div class="text-[11px] text-right text-slate-400 mt-1">
+                  Spesa PdC: <strong class="text-slate-200">${Math.round(yearlyPdcCostEuro).toLocaleString('it-IT')} €/a</strong> vs ${Math.round(yearlyGasCostEuro).toLocaleString('it-IT')} €
+                </div>
+              </div>
+            </div>
+          `;
+        } else {
+          kpiContainer.innerHTML += `
+            <div class="card-glass rounded-2xl p-4 border-t-4 border-slate-700 opacity-55 bg-slate-900/40 flex flex-col justify-between">
+              <div class="flex justify-between items-start">
+                <div>
+                  <span class="text-sm font-black uppercase px-2.5 py-0.5 rounded bg-slate-800 text-slate-400">${hp.name}</span>
+                  <h4 class="text-xs text-slate-400 mt-1.5 font-bold">${modelInfo.label}</h4>
+                </div>
+                <span class="text-xs text-rose-400 bg-rose-950/60 border border-rose-800 px-2 py-0.5 rounded font-bold">Max ${modelInfo.maxLWT}°C</span>
+              </div>
+              <div class="my-auto py-8 text-center">
+                <div class="text-base text-rose-400 font-black uppercase">Fuori Range Operativo</div>
+                <div class="text-xs text-slate-400 mt-1">LWT ${lwt}°C supera il limite massimo di ${modelInfo.maxLWT}°C</div>
+              </div>
+            </div>
+          `;
+        }
+      });
+
+      // 2. AGGIORNA GRAFICO PRINCIPALE
+      const lwtAxis = [];
+      for (let t = 35; t <= 75; t += 1) lwtAxis.push(t);
+
+      document.getElementById('mainChartTitle').textContent = mode === 'scop'
+        ? 'Curva SCOP Stagionale (35°C–55°C Certificato ErP + Stima >55°C) vs COP di Bivalenza'
+        : `Curva COP Puntuale (Tamb = ${tamb}°C, Tint = 20°C) vs COP di Bivalenza`;
+
+      const datasets = Object.keys(heatPumps).map(key => {
+        const hp = heatPumps[key];
+        const sizeKey = selectedSizes[key];
+        const dataPoints = lwtAxis.map(t => getActiveEfficiency(key, sizeKey, t, tamb, mode));
+        return {
+          label: `${hp.name} (${hp.sizes[sizeKey].label})`,
+          data: dataPoints,
+          borderColor: hp.color,
+          backgroundColor: hp.color,
+          borderWidth: 3.5,
+          pointRadius: lwtAxis.map(t => (t === lwt ? 7 : (t % 5 === 0 ? 3 : 0))),
+          pointHoverRadius: 8,
+          tension: 0.3,
+          spanGaps: false,
+          segment: {
+            borderDash: ctx => (mode === 'scop' && lwtAxis[ctx.p0DataIndex] >= 55) ? [6, 4] : undefined
+          }
+        };
+      });
+
+      datasets.push({
+        label: `COP di Bivalenza (${copBivalenza.toFixed(2)}) - Pareggio vs Gas`,
+        data: lwtAxis.map(() => Number(copBivalenza.toFixed(2))),
+        borderColor: '#f43f5e',
+        backgroundColor: 'rgba(244, 63, 94, 0.1)',
+        borderWidth: 2.5,
+        borderDash: [8, 4],
+        pointRadius: 0,
+        fill: false
+      });
+
+      if (copChartInstance) copChartInstance.destroy();
+      const ctxCop = document.getElementById('copChart').getContext('2d');
+      copChartInstance = new Chart(ctxCop, {
+        type: 'line',
+        data: { labels: lwtAxis.map(t => `${t}°C`), datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { labels: { color: '#cbd5e1', font: { size: 12, weight: 'bold' } } },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.95)',
+              titleColor: '#38bdf8',
+              bodyColor: '#f8fafc',
+              borderColor: '#334155',
+              borderWidth: 1
+            }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: 'Temperatura di Mandata LWT [°C]', color: '#94a3b8' },
+              ticks: { color: '#94a3b8', maxTicksLimit: 10 },
+              grid: { color: 'rgba(148, 163, 184, 0.1)' }
+            },
+            y: {
+              title: { display: true, text: mode === 'scop' ? 'SCOP Stagionale' : 'COP Puntuale', color: '#94a3b8' },
+              min: 1.0,
+              max: 6.2,
+              ticks: { color: '#94a3b8' },
+              grid: { color: 'rgba(148, 163, 184, 0.1)' }
+            }
+          }
+        }
+      });
+
+      // 3. AGGIORNA GRAFICO BARRE SPESA ANNUA (€/ANNO) VS CALDAIA A GAS
+      document.getElementById('econChartSub').textContent = `Spesa annua a LWT ${lwt}°C per ${gasYearlySm3.toLocaleString('it-IT')} Sm³ di gas (${Math.round(yearlyThermalKwh).toLocaleString('it-IT')} kWht/anno)`;
+
+      const barLabels = ['Caldaia Gas'];
+      const barYearlyEuro = [Math.round(yearlyGasCostEuro)];
+      const barColors = ['#ef4444'];
+
+      Object.keys(heatPumps).forEach(key => {
+        const hp = heatPumps[key];
+        const sizeKey = selectedSizes[key];
+        const eff = getActiveEfficiency(key, sizeKey, lwt, tamb, mode);
+        barLabels.push(hp.name);
+        if (eff !== null) {
+          const pdcEuro = yearlyThermalKwh * (netElecPrice / eff);
+          barYearlyEuro.push(Math.round(pdcEuro));
+          barColors.push(hp.color);
+        } else {
+          barYearlyEuro.push(0);
+          barColors.push('rgba(100,116,139,0.25)');
+        }
+      });
+
+      if (econChartInstance) econChartInstance.destroy();
+      const ctxEcon = document.getElementById('econChart').getContext('2d');
+      econChartInstance = new Chart(ctxEcon, {
+        type: 'bar',
+        data: {
+          labels: barLabels,
+          datasets: [{
+            label: 'Spesa Annua [€/anno]',
+            data: barYearlyEuro,
+            backgroundColor: barColors,
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  if (ctx.raw === 0) return 'Fuori Range LWT';
+                  if (ctx.dataIndex === 0) return `Spesa Metano: ${ctx.raw.toLocaleString('it-IT')} €/anno`;
+                  const diffEuro = Math.round(yearlyGasCostEuro - ctx.raw);
+                  const savPct = ((1 - ctx.raw / yearlyGasCostEuro) * 100).toFixed(0);
+                  return `Spesa PdC: ${ctx.raw.toLocaleString('it-IT')} €/anno (Risparmio: ${formatEuro(diffEuro)} | ${savPct}%)`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: { ticks: { color: '#cbd5e1', font: { size: 12, weight: 'bold' } }, grid: { display: false } },
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Spesa Annua [€/anno]', color: '#94a3b8' },
+              ticks: { color: '#94a3b8' },
+              grid: { color: 'rgba(148, 163, 184, 0.1)' }
+            }
+          }
+        }
+      });
+
+      const bivSummary = document.getElementById('bivalenceSummaryBox');
+      let summaryHtml = `<div class="font-bold text-amber-300 mb-1.5 text-xs">📌 Temperatura LWT massima prima di andare in perdita rispetto al Metano (COP Biv = ${copBivalenza.toFixed(2)}):</div><div class="grid grid-cols-2 gap-1.5 text-xs">`;
+      Object.keys(heatPumps).forEach(key => {
+        const hp = heatPumps[key];
+        const sizeKey = selectedSizes[key];
+        const maxConvLwt = findMaxConvenientLWT(key, sizeKey, tamb, mode, copBivalenza);
+        const maxMachineLwt = hp.sizes[sizeKey].maxLWT;
+        summaryHtml += `
+          <div><strong style="color:${hp.color}">${hp.name}:</strong> ${
+            maxConvLwt === null ? '<span class="text-rose-400 font-bold">Mai conveniente</span>' :
+            (maxConvLwt === maxMachineLwt ? `<span class="text-emerald-400 font-bold">Fino a ${maxConvLwt}°C (Tutto il range)</span>` : `<span class="text-amber-300 font-bold">Fino a ${maxConvLwt}°C</span>`)
+          }</div>
+        `;
+      });
+      summaryHtml += `</div>`;
+      bivSummary.innerHTML = summaryHtml;
+
+      // 4. AGGIORNA TABELLA SCOP CERTIFICATI 35°C vs 55°C (CON % E €/ANNO BEN EVIDENZIATI)
+      const scopTbody = document.getElementById('scopTableBody');
+      scopTbody.innerHTML = '';
+
+      Object.keys(heatPumps).forEach(key => {
+        const hp = heatPumps[key];
+        const sizeKey = selectedSizes[key];
+        const m = hp.sizes[sizeKey];
+
+        const cost35 = netElecPrice / m.scop35;
+        const sav35Pct = ((1 - cost35 / gasCostPerKwht) * 100);
+        const sav35Euro = yearlyGasCostEuro - (yearlyThermalKwh * cost35);
+
+        const cost55 = netElecPrice / m.scop55;
+        const sav55Pct = ((1 - cost55 / gasCostPerKwht) * 100);
+        const sav55Euro = yearlyGasCostEuro - (yearlyThermalKwh * cost55);
+
+        const limitLwt = findMaxConvenientLWT(key, sizeKey, tamb, mode, copBivalenza);
+
+        scopTbody.innerHTML += `
+          <tr class="hover:bg-slate-800/40 transition">
+            <td class="py-4 px-4 font-bold text-white text-base">
+              <span class="inline-block w-3 h-3 rounded-full mr-2" style="background:${hp.color}"></span>
+              ${hp.name} <span class="text-xs font-normal text-slate-400">(${m.label})</span>
+            </td>
+            <td class="py-4 px-3 text-center font-extrabold text-slate-200 text-base">${m.maxLWT}°C</td>
+            
+            <!-- Colonne 35°C -->
+            <td class="py-4 px-3 text-center text-xl font-black text-emerald-400 bg-emerald-950/10">${m.scop35.toFixed(2)}</td>
+            <td class="py-4 px-3 text-center font-bold text-slate-200 bg-emerald-950/10">${cost35.toFixed(3)} €/kWht</td>
+            <td class="py-4 px-3 text-center bg-emerald-950/10">
+              <span class="text-xl font-black ${sav35Pct >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+                ${sav35Pct >= 0 ? `+${sav35Pct.toFixed(0)}%` : `${sav35Pct.toFixed(0)}%`}
+              </span>
+              <span class="ml-2 px-2.5 py-1 rounded-lg text-base font-black bg-emerald-500/20 text-white border border-emerald-500/40">
+                ${formatEuro(sav35Euro)}/a
+              </span>
+            </td>
+
+            <!-- Colonne 55°C -->
+            <td class="py-4 px-3 text-center text-xl font-black text-amber-300 bg-amber-950/10">${m.scop55.toFixed(2)}</td>
+            <td class="py-4 px-3 text-center font-bold text-slate-200 bg-amber-950/10">${cost55.toFixed(3)} €/kWht</td>
+            <td class="py-4 px-3 text-center bg-amber-950/10">
+              <span class="text-xl font-black ${sav55Pct >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+                ${sav55Pct >= 0 ? `+${sav55Pct.toFixed(0)}%` : `${sav55Pct.toFixed(0)}%`}
+              </span>
+              <span class="ml-2 px-2.5 py-1 rounded-lg text-base font-black bg-amber-500/20 text-white border border-amber-500/40">
+                ${formatEuro(sav55Euro)}/a
+              </span>
+            </td>
+
+            <td class="py-4 px-3 text-center font-bold">
+              ${limitLwt === null 
+                ? '<span class="text-rose-400 font-extrabold">Sotto Bivalenza</span>' 
+                : `<span class="px-3 py-1 rounded-lg bg-slate-800 text-sky-300 border border-slate-700 font-extrabold">Fino a ${limitLwt}°C</span>`}
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    document.getElementById('lwtSlider').addEventListener('input', updateDashboard);
+    window.addEventListener('DOMContentLoaded', updateDashboard);
+  </script>
+</body>
+</html>
