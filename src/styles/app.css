@@ -1,0 +1,30 @@
+/* Sorgente Tailwind CSS v4. Il file compilato è assets/css/app.css (npm run build:css). */
+@import "tailwindcss" source(none);
+
+/* File in cui Tailwind cerca le classi usate (anche quelle generate dai template JS). */
+@source "../../index.html";
+@source "../";
+
+@layer base {
+  body {
+    background-color: #0b1120;
+    color: #f8fafc;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  input[type=range] {
+    accent-color: #38bdf8;
+  }
+}
+
+@layer components {
+  .card-glass {
+    background: rgba(30, 41, 59, 0.80);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+  }
+}

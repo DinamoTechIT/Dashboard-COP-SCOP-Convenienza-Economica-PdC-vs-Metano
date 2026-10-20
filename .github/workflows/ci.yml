@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: CSS compilato allineato ai sorgenti
+        run: |
+          npm run build:css
+          git diff --exit-code -- assets/css/app.css || {
+            echo "::error::assets/css/app.css non è aggiornato: eseguire 'npm run build:css' e committare il risultato."
+            exit 1
+          }
+
+      - name: Versione standalone
+        run: node scripts/build-standalone.mjs
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-standalone
+          path: dist/dashboard-standalone.html
