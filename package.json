@@ -1,0 +1,24 @@
+{
+  "name": "dashboard-cop-scop-pdc-vs-metano",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dashboard COP/SCOP e convenienza economica pompe di calore Daikin vs caldaia a metano",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "build:css": "tailwindcss -i src/styles/app.css -o assets/css/app.css --minify",
+    "watch:css": "tailwindcss -i src/styles/app.css -o assets/css/app.css --watch",
+    "build:standalone": "npm run build:css && node scripts/build-standalone.mjs",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "4.3.3",
+    "chart.js": "4.5.1",
+    "esbuild": "0.28.2",
+    "tailwindcss": "4.3.3"
+  }
+}
