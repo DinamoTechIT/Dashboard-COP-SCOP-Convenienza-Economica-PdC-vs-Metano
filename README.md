@@ -13,7 +13,8 @@ sulla bolletta.
   della caldaia, quota di autoconsumo fotovoltaico; preset rapidi per tariffe, consumi e FV.
 - **Temperatura di mandata** regolabile da 35 °C a 75 °C con indicazione del terminale di
   emissione tipico e dei limiti operativi di ogni serie.
-- **Card per modello** con efficienza, costo del kWh termico, risparmio % e €/anno.
+- **Card per modello** con tipologia (bassa → alta temperatura), temperatura massima, fascia di
+  prezzo indicativa, efficienza, costo del kWh termico, risparmio % e €/anno.
 - **Grafici**: curve di efficienza con la soglia di bivalenza e spesa annua per tecnologia.
 - **Tabella SCOP certificati** a 35 °C e 55 °C con risparmio annuo e mandata limite di
   convenienza.
@@ -82,7 +83,9 @@ docs/metodologia.md        Formule e ipotesi
 
 **Aggiornare prezzi o preset** → `src/data/presets.js`.
 
-**Aggiungere una taglia o una serie** → `src/data/heat-pumps.js`. Ogni taglia richiede
+**Aggiungere una taglia o una serie** → `src/data/heat-pumps.js`. Ogni serie ha colore,
+tipologia (`typeLabel`) e fascia di prezzo indicativa (`priceLevel`, numero di banconote nelle
+card). Ogni taglia richiede
 `label`, `maxLWT`, `scop35`, `scop55` e la tabella `cop7` (COP a +7 °C) da 35 °C fino a
 `maxLWT`, con almeno il punto a 55 °C. Selettori, card, grafici e tabella si aggiornano da soli;
 `npm test` verifica la coerenza dei dati inseriti. Se si aggiungono classi Tailwind nuove, va

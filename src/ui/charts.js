@@ -6,8 +6,9 @@ import { LWT_AXIS } from '../core/dashboard.js';
 import { SCOP_CERTIFIED_LWT } from '../core/efficiency.js';
 import { formatNumber, formatSignedEuro, formatSignedPercent } from './format.js';
 
-const BIVALENCE_COLOR = '#f43f5e';
-const GAS_COLOR = '#ef4444';
+// Soglia e caldaia in colori neutri, distinti da quelli delle serie (EPSK è rossa).
+const BIVALENCE_COLOR = '#f8fafc';
+const GAS_COLOR = '#94a3b8';
 const OUT_OF_RANGE_COLOR = 'rgba(100, 116, 139, 0.25)';
 const AXIS_COLOR = '#94a3b8';
 const GRID_COLOR = 'rgba(148, 163, 184, 0.1)';
@@ -60,7 +61,7 @@ function buildEfficiencyDatasets({ inputs, energy, models }) {
     label: `COP di Bivalenza (${formatNumber(bivalentCop, 2)}) - Pareggio vs Gas`,
     data: LWT_AXIS.map(() => bivalentCop),
     borderColor: BIVALENCE_COLOR,
-    backgroundColor: 'rgba(244, 63, 94, 0.1)',
+    backgroundColor: 'rgba(248, 250, 252, 0.1)',
     borderWidth: 2.5,
     borderDash: [8, 4],
     pointRadius: 0,

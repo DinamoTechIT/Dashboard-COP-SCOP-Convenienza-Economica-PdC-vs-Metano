@@ -14,6 +14,13 @@ describe('catalogo pompe di calore', () => {
     HEAT_PUMP_SERIES.forEach(s => assert.ok(s.sizes[s.defaultSize], `${s.id}: defaultSize ${s.defaultSize}`));
   });
 
+  test('ogni serie ha tipologia e fascia di prezzo (intero positivo)', () => {
+    HEAT_PUMP_SERIES.forEach(s => {
+      assert.ok(s.typeLabel, `${s.id}: typeLabel mancante`);
+      assert.ok(Number.isInteger(s.priceLevel) && s.priceLevel > 0, `${s.id}: priceLevel ${s.priceLevel}`);
+    });
+  });
+
   for (const series of HEAT_PUMP_SERIES) {
     for (const [sizeKey, model] of Object.entries(series.sizes)) {
       test(`${model.label}: dati databook coerenti`, () => {
