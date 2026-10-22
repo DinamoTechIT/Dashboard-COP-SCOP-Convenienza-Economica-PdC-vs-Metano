@@ -1,6 +1,7 @@
 // Tabella riepilogativa SCOP certificati (35 °C e 55 °C) con risparmio annuo.
 
 import { formatEuro, formatNumber, formatSignedEuro, formatSignedPercent } from './format.js';
+import { seriesName, sizeLabel } from './labels.js';
 
 const COLUMN_TONES = {
   35: { scop: 'text-emerald-400', cell: 'bg-emerald-950/10', pill: 'bg-emerald-500/20 border-emerald-500/40' },
@@ -18,12 +19,12 @@ function renderSeasonalCells(scop, savings, tone) {
   `;
 }
 
-function renderRow({ series, model, seasonal, maxConvenientLwt }) {
+function renderRow({ series, sizeKey, model, seasonal, maxConvenientLwt }, anonymous) {
   return `
     <tr class="hover:bg-slate-800/40 transition">
       <th scope="row" class="py-4 px-4 font-bold text-white text-base text-left whitespace-nowrap">
         <span class="inline-block w-3 h-3 rounded-full mr-2" style="background:${series.color}"></span>
-        ${series.name} <span class="text-xs font-normal text-slate-400">(${model.label})</span>
+        ${seriesName(series, anonymous)} <span class="text-xs font-normal text-slate-400">(${sizeLabel(series, sizeKey, anonymous)})</span>
       </th>
       <td class="py-4 px-3 text-center font-extrabold text-slate-200 text-base">${model.maxLWT}°C</td>
       ${renderSeasonalCells(model.scop35, seasonal.scop35, COLUMN_TONES[35])}
@@ -37,6 +38,6 @@ function renderRow({ series, model, seasonal, maxConvenientLwt }) {
   `;
 }
 
-export function renderScopTable({ models }) {
-  document.getElementById('scopTableBody').innerHTML = models.map(renderRow).join('');
+export function renderScopTable({ inputs, models }) {
+  document.getElementById('scopTableBody').innerHTML = models.map(m => renderRow(m, inputs.anonymous)).join('');
 }

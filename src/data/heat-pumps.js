@@ -8,16 +8,27 @@
 //
 // L'ordine dell'array è l'ordine di visualizzazione (card, grafici, tabella).
 // `techBonus` è il correttivo applicato al COP puntuale per le serie ad alta temperatura.
-// `typeLabel` descrive la serie nelle card; `priceLevel` è la fascia di prezzo indicativa,
+// `alias` sostituisce il nome commerciale quando sono attivi i nomi generici (es. per i video);
+// `temperatureClass` rimanda a TEMPERATURE_CLASSES; `priceLevel` è la fascia di prezzo indicativa,
 // espressa come numero di banconote (scala relativa tra le serie, non un importo).
+// Le chiavi delle taglie corrispondono alla potenza nominale in kW.
+
+// Categorie di temperatura: descrizione nelle card e dicitura breve sulle tacche dello slider.
+export const TEMPERATURE_CLASSES = {
+  low:     { label: 'Pompa di calore a bassa temperatura',      short: 'bassa T.' },
+  mid:     { label: 'Pompa di calore a media temperatura',      short: 'media T.' },
+  midHigh: { label: 'Pompa di calore a medio-alta temperatura', short: 'medio-alta T.' },
+  high:    { label: 'Pompa di calore ad alta temperatura',      short: 'alta T.' }
+};
 
 export const HEAT_PUMP_SERIES = [
   {
     id: 'ebla',
     name: 'EBLA',
     fullName: 'Altherma 3 M (Monoblocco R32)',
+    alias: 'BT Mono',
     selectorLabel: 'Monoblocco',
-    typeLabel: 'Pompa di calore a bassa temperatura',
+    temperatureClass: 'low',
     priceLevel: 3,
     refrigerant: 'R-32',
     color: '#38bdf8',
@@ -35,8 +46,9 @@ export const HEAT_PUMP_SERIES = [
     id: 'erla',
     name: 'ERLA',
     fullName: 'Altherma 3 R (Split BT R32)',
+    alias: 'BT Split',
     selectorLabel: 'Split LT',
-    typeLabel: 'Pompa di calore a bassa temperatura',
+    temperatureClass: 'low',
     priceLevel: 3,
     refrigerant: 'R-32',
     color: '#7dd3fc',
@@ -53,8 +65,9 @@ export const HEAT_PUMP_SERIES = [
     id: 'erra',
     name: 'ERRA',
     fullName: 'Altherma 3 R MT (Split Media T.)',
+    alias: 'MT',
     selectorLabel: 'Split MT',
-    typeLabel: 'Pompa di calore a media temperatura',
+    temperatureClass: 'mid',
     priceLevel: 4,
     refrigerant: 'R-32',
     color: '#fbbf24',
@@ -71,8 +84,9 @@ export const HEAT_PUMP_SERIES = [
     id: 'epra',
     name: 'EPRA',
     fullName: 'Altherma 3 H HT (Hydrosplit 70°C)',
+    alias: 'MAT',
     selectorLabel: 'Split HT R32',
-    typeLabel: 'Pompa di calore a medio-alta temperatura',
+    temperatureClass: 'midHigh',
     priceLevel: 5,
     refrigerant: 'R-32',
     color: '#f97316',
@@ -89,8 +103,9 @@ export const HEAT_PUMP_SERIES = [
     id: 'epsk',
     name: 'EPSK',
     fullName: 'Altherma 4 H (Hydrosplit R290 75°C)',
+    alias: 'AT',
     selectorLabel: 'Altherma 4 R290',
-    typeLabel: 'Pompa di calore ad alta temperatura',
+    temperatureClass: 'high',
     priceLevel: 6,
     refrigerant: 'R-290',
     color: '#ef4444',
@@ -121,6 +136,10 @@ export function getModel(seriesId, sizeKey) {
   const model = getSeries(seriesId).sizes[sizeKey];
   if (!model) throw new Error(`Taglia sconosciuta: ${seriesId} ${sizeKey}`);
   return model;
+}
+
+export function getTemperatureClass(series) {
+  return TEMPERATURE_CLASSES[series.temperatureClass];
 }
 
 // Mandata massima raggiungibile dalla taglia più "spinta" di una serie.

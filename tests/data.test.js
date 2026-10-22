@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { describe, test } from 'node:test';
 
 import { AMBIENT_CONDITIONS } from '../src/data/climate.js';
-import { HEAT_PUMP_SERIES, LWT_MAX, LWT_MIN } from '../src/data/heat-pumps.js';
+import { HEAT_PUMP_SERIES, LWT_MAX, LWT_MIN, TEMPERATURE_CLASSES } from '../src/data/heat-pumps.js';
 import { DEFAULT_INPUTS, GAS_CONSUMPTION_PRESETS, PV_PRESETS, TARIFF_PRESETS } from '../src/data/presets.js';
 
 describe('catalogo pompe di calore', () => {
@@ -14,11 +14,16 @@ describe('catalogo pompe di calore', () => {
     HEAT_PUMP_SERIES.forEach(s => assert.ok(s.sizes[s.defaultSize], `${s.id}: defaultSize ${s.defaultSize}`));
   });
 
-  test('ogni serie ha tipologia e fascia di prezzo (intero positivo)', () => {
+  test('ogni serie ha categoria di temperatura valida e fascia di prezzo (intero positivo)', () => {
     HEAT_PUMP_SERIES.forEach(s => {
-      assert.ok(s.typeLabel, `${s.id}: typeLabel mancante`);
+      assert.ok(TEMPERATURE_CLASSES[s.temperatureClass], `${s.id}: temperatureClass ${s.temperatureClass}`);
       assert.ok(Number.isInteger(s.priceLevel) && s.priceLevel > 0, `${s.id}: priceLevel ${s.priceLevel}`);
     });
+  });
+
+  test('i nomi generici sono univoci e non contengono il nome commerciale', () => {
+    assert.equal(new Set(HEAT_PUMP_SERIES.map(s => s.alias)).size, HEAT_PUMP_SERIES.length);
+    HEAT_PUMP_SERIES.forEach(s => assert.ok(!s.alias.toUpperCase().includes(s.name), `${s.id}: alias ${s.alias}`));
   });
 
   for (const series of HEAT_PUMP_SERIES) {
@@ -32,6 +37,7 @@ describe('catalogo pompe di calore', () => {
         assert.ok(model.scop35 > model.scop55, 'SCOP 35 °C > SCOP 55 °C');
         points.slice(1).forEach((t, i) => assert.ok(model.cop7[t] < model.cop7[points[i]], `COP decrescente a ${t} °C`));
         assert.ok(model.label.includes(sizeKey), `etichetta coerente con la taglia ${sizeKey}`);
+        assert.ok(model.label.includes(`(${Number(sizeKey)} kW)`), 'la chiave della taglia è la potenza in kW');
       });
     }
   }

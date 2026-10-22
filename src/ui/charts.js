@@ -5,6 +5,7 @@ import { INDOOR_TEMPERATURE } from '../data/climate.js';
 import { LWT_AXIS } from '../core/dashboard.js';
 import { SCOP_CERTIFIED_LWT } from '../core/efficiency.js';
 import { formatNumber, formatSignedEuro, formatSignedPercent } from './format.js';
+import { modelLabel, seriesName } from './labels.js';
 
 // Soglia e caldaia in colori neutri, distinti da quelli delle serie (EPSK è rossa).
 const BIVALENCE_COLOR = '#f8fafc';
@@ -41,8 +42,8 @@ function efficiencyAxisRange(datasets, bivalentCop) {
 
 function buildEfficiencyDatasets({ inputs, energy, models }) {
   const extrapolatedFrom = SCOP_CERTIFIED_LWT[1];
-  const datasets = models.map(({ series, model, curve }) => ({
-    label: model.label,
+  const datasets = models.map(({ series, sizeKey, curve }) => ({
+    label: modelLabel(series, sizeKey, inputs.anonymous),
     data: curve,
     borderColor: series.color,
     backgroundColor: series.color,
@@ -161,7 +162,10 @@ function updateCostChart(chart, { inputs, energy, models }) {
     `Spesa annua a LWT ${inputs.lwt}°C per ${formatNumber(inputs.gasYearlySm3)} Sm³ di gas (${formatNumber(energy.yearlyThermalKwh)} kWht/anno)`;
 
   const [dataset] = chart.data.datasets;
-  chart.data.labels = ['Caldaia Gas', ...models.map(m => (m.savings ? m.series.name : [m.series.name, 'fuori range']))];
+  chart.data.labels = ['Caldaia Gas', ...models.map(m => {
+    const name = seriesName(m.series, inputs.anonymous);
+    return m.savings ? name : [name, 'fuori range'];
+  })];
   dataset.data = [Math.round(energy.yearlyGasCost), ...models.map(m => (m.savings ? Math.round(m.savings.yearlyCost) : null))];
   dataset.backgroundColor = [GAS_COLOR, ...models.map(m => (m.savings ? m.series.color : OUT_OF_RANGE_COLOR))];
   chart.update();

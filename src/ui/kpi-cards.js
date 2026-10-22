@@ -1,8 +1,9 @@
 // Card riassuntive per ciascuna pompa di calore alla mandata selezionata.
 
-import { PRICE_LEVEL_MAX } from '../data/heat-pumps.js';
+import { PRICE_LEVEL_MAX, getTemperatureClass } from '../data/heat-pumps.js';
 import { getScopSource } from '../core/efficiency.js';
 import { formatEuro, formatNumber, formatSignedEuro, formatSignedPercent } from './format.js';
+import { seriesName } from './labels.js';
 
 const SCOP_LABELS = {
   certified: 'SCOP',
@@ -34,7 +35,7 @@ function renderPriceLevel(level) {
 }
 
 // Intestazione comune: serie, stato, tipologia, temperatura massima del modello e fascia di prezzo.
-function renderCardHeader(series, model, statusBadge, muted = false) {
+function renderCardHeader(series, model, anonymous, statusBadge, muted = false) {
   const nameStyle = muted ? 'class="text-sm font-black uppercase px-2.5 py-0.5 rounded bg-slate-800 text-slate-400"'
     : `class="text-sm font-black uppercase px-2.5 py-0.5 rounded" style="background:${series.bgLight}; color:${series.color}"`;
   // Tipologia e Tmax nel colore della serie (grigio se il modello è fuori range).
@@ -42,10 +43,10 @@ function renderCardHeader(series, model, statusBadge, muted = false) {
   const accentStyle = muted ? '' : `style="color:${series.color}"`;
   return `
     <div class="flex justify-between items-start gap-2">
-      <span ${nameStyle}>${series.name}</span>
+      <span ${nameStyle}>${seriesName(series, anonymous)}</span>
       ${statusBadge}
     </div>
-    <h4 class="text-xs mt-2 font-bold ${accentClass}" ${accentStyle}>${series.typeLabel}</h4>
+    <h4 class="text-xs mt-2 font-bold ${accentClass}" ${accentStyle}>${getTemperatureClass(series).label}</h4>
     <div class="mt-1 flex flex-wrap justify-between items-center gap-x-2 gap-y-1 text-[11px]">
       <span class="text-slate-400 font-semibold">T<sub>max</sub> <strong class="${accentClass}" ${accentStyle}>${model.maxLWT}°C</strong></span>
       ${renderPriceLevel(series.priceLevel)}
@@ -59,7 +60,7 @@ function renderActiveCard({ series, model, efficiency, savings }, { inputs, ener
   return `
     <article class="card-glass rounded-2xl p-4 border-t-4 flex flex-col justify-between transition hover:scale-[1.01]" style="border-top-color: ${series.color}">
       <div>
-        ${renderCardHeader(series, model, `
+        ${renderCardHeader(series, model, inputs.anonymous, `
           <span class="shrink-0 text-xs px-2 py-0.5 rounded font-bold border ${savings.isConvenient ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-rose-500/20 text-rose-300 border-rose-500/40'}">
             ${savings.isConvenient ? '✓ Conveniente' : '✗ Sotto Biv.'}
           </span>
@@ -102,7 +103,7 @@ function renderOutOfRangeCard({ series, model }, { inputs }) {
   return `
     <article class="card-glass rounded-2xl p-4 border-t-4 border-t-slate-700 opacity-55 bg-slate-900/40 flex flex-col justify-between">
       <div>
-        ${renderCardHeader(series, model, `
+        ${renderCardHeader(series, model, inputs.anonymous, `
           <span class="shrink-0 text-xs text-rose-400 bg-rose-950/60 border border-rose-800 px-2 py-0.5 rounded font-bold">✗ Fuori range</span>
         `, true)}
       </div>

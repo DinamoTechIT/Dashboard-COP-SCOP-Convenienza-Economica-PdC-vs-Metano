@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Confronto COP/SCOP e convenienza economica delle pompe di calore Daikin rispetto alla caldaia a metano">
-  <title>Dashboard COP / SCOP & Risparmio Annuo PdC vs Metano - Daikin</title>
+  <meta name="description" content="Confronto COP/SCOP e convenienza economica delle pompe di calore rispetto alla caldaia a metano">
+  <title data-named="Dashboard COP / SCOP & Risparmio Annuo PdC vs Metano - Daikin" data-anonymous="Dashboard COP / SCOP & Risparmio Annuo PdC vs Metano">Dashboard COP / SCOP & Risparmio Annuo PdC vs Metano - Daikin</title>
   <link rel="stylesheet" href="assets/css/app.css">
 </head>
 <body class="min-h-screen p-4 md:p-6">
@@ -15,7 +15,7 @@
     <header class="card-glass rounded-2xl p-6 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
       <div>
         <div class="flex flex-wrap items-center gap-2">
-          <span class="px-3 py-1 text-xs font-bold uppercase tracking-wider bg-sky-500/20 text-sky-400 rounded-full border border-sky-500/30">Databook Daikin</span>
+          <span class="px-3 py-1 text-xs font-bold uppercase tracking-wider bg-sky-500/20 text-sky-400 rounded-full border border-sky-500/30" data-named="Databook Daikin" data-anonymous="Databook costruttore">Databook Daikin</span>
           <span class="px-3 py-1 text-xs font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 rounded-full border border-amber-500/30">Analisi COP Bivalenza, % & €/Anno</span>
         </div>
         <h1 class="text-2xl md:text-3xl font-extrabold mt-2 text-white">Dashboard COP / SCOP & Risparmio Bolletta PdC vs Metano</h1>
@@ -134,7 +134,7 @@
           </div>
 
           <input id="lwtSlider" type="range" step="1" class="w-full h-4 bg-slate-700 rounded-lg cursor-pointer my-4">
-          <div id="lwtTicks" class="relative hidden sm:block h-9 mx-2 text-xs font-bold" aria-hidden="true"></div>
+          <div id="lwtTicks" class="relative hidden sm:block h-9 lg:h-12 mx-2 text-xs font-bold" aria-hidden="true"></div>
         </div>
 
         <div class="mt-5 pt-4 border-t border-slate-800 flex flex-wrap gap-2 items-center justify-between">
@@ -183,7 +183,7 @@
     <section class="card-glass rounded-2xl p-6">
       <div class="mb-4">
         <h2 class="text-lg font-bold text-white">Riepilogo Stagionale Certificato (SCOP 35°C vs 55°C) & Risparmio Annuo in Bolletta (% e €/anno)</h2>
-        <p class="text-xs text-slate-400">Valori ufficiali EN 14825 (Clima Medio) estratti dai databook Daikin applicati al tuo consumo annuo di metano</p>
+        <p class="text-xs text-slate-400">Valori ufficiali EN 14825 (Clima Medio) estratti dai databook <span data-named="Daikin" data-anonymous="del costruttore">Daikin</span> applicati al tuo consumo annuo di metano</p>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
@@ -205,8 +205,13 @@
       </div>
     </section>
 
-    <footer class="text-center text-xs text-slate-500 pb-2">
-      Valori di COP/SCOP da databook Daikin; curve intermedie e correzioni per Tamb sono stime. Metodo di calcolo descritto in <a class="underline hover:text-slate-300" href="https://github.com/DinamoTechIT/Dashboard-COP-SCOP-Convenienza-Economica-PdC-vs-Metano/blob/main/docs/metodologia.md">docs/metodologia.md</a>.
+    <footer class="text-center text-xs text-slate-500 pb-2 space-y-3">
+      <p>Valori di COP/SCOP da databook <span data-named="Daikin" data-anonymous="del costruttore">Daikin</span>; curve intermedie e correzioni per Tamb sono stime. Metodo di calcolo descritto in <a class="underline hover:text-slate-300" href="https://github.com/DinamoTechIT/Dashboard-COP-SCOP-Convenienza-Economica-PdC-vs-Metano/blob/main/docs/metodologia.md">docs/metodologia.md</a>.</p>
+      <label class="inline-flex items-center gap-2 cursor-pointer select-none hover:text-slate-300">
+        <input id="anonymousToggle" type="checkbox" class="peer sr-only">
+        <span class="relative w-8 h-4 rounded-full bg-slate-700 transition peer-checked:bg-sky-600 peer-focus-visible:ring-2 peer-focus-visible:ring-sky-400 after:absolute after:top-0.5 after:left-0.5 after:w-3 after:h-3 after:rounded-full after:bg-slate-300 after:transition peer-checked:after:translate-x-4" aria-hidden="true"></span>
+        Nomi generici dei modelli
+      </label>
     </footer>
 
   </main>
