@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Confronto COP/SCOP e convenienza economica delle pompe di calore Daikin rispetto alla caldaia a metano">
-  <title>Dashboard COP / SCOP & Risparmio Annuo PdC vs Metano - Daikin</title>
+  <meta name="description" content="Confronto COP/SCOP e convenienza economica delle pompe di calore rispetto alla caldaia a metano">
+  <title data-named="Dashboard COP / SCOP & Risparmio Annuo PdC vs Metano - Daikin" data-anonymous="Dashboard COP / SCOP & Risparmio Annuo PdC vs Metano">Dashboard COP / SCOP & Risparmio Annuo PdC vs Metano - Daikin</title>
   <link rel="stylesheet" href="assets/css/app.css">
 </head>
 <body class="min-h-screen p-4 md:p-6">
@@ -12,27 +12,35 @@
   <main class="max-w-[1480px] mx-auto space-y-6">
 
     <!-- HEADER + SELETTORE MODALITÀ (COP PUNTUALE vs SCOP STAGIONALE) -->
-    <header class="card-glass rounded-2xl p-6 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+    <header class="card-glass rounded-2xl p-6 space-y-4">
       <div>
         <div class="flex flex-wrap items-center gap-2">
-          <span class="px-3 py-1 text-xs font-bold uppercase tracking-wider bg-sky-500/20 text-sky-400 rounded-full border border-sky-500/30">Databook Daikin</span>
+          <span class="px-3 py-1 text-xs font-bold uppercase tracking-wider bg-sky-500/20 text-sky-400 rounded-full border border-sky-500/30" data-named="Databook Daikin" data-anonymous="Databook costruttore">Databook Daikin</span>
           <span class="px-3 py-1 text-xs font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 rounded-full border border-amber-500/30">Analisi COP Bivalenza, % & €/Anno</span>
         </div>
         <h1 class="text-2xl md:text-3xl font-extrabold mt-2 text-white">Dashboard COP / SCOP & Risparmio Bolletta PdC vs Metano</h1>
         <p class="text-slate-300 text-sm mt-1">Confronto <strong id="seriesList" class="text-white"></strong> con calcolo del punto di pareggio (COP di Bivalenza), risparmio % e risparmio in €/anno</p>
       </div>
 
-      <div class="w-full lg:w-auto flex flex-wrap gap-3 items-center bg-slate-900/95 p-3.5 rounded-xl border border-slate-700">
-        <div class="w-full sm:w-auto">
-          <label for="modeSelect" class="block text-xs uppercase tracking-wider text-sky-400 font-bold mb-1">Modalità di Analisi</label>
-          <select id="modeSelect" class="w-full bg-slate-800 text-white text-sm font-bold rounded-lg px-3 py-2 border border-sky-500/50 focus:outline-none">
-            <option value="cop" selected>COP Puntuale (35°C → Max LWT)</option>
-            <option value="scop">SCOP Stagionale EN14825 (35°C → 55°C)</option>
-          </select>
+      <!-- Impostazioni di confronto: modalità, temperatura esterna e taglie dei modelli -->
+      <div class="flex flex-col xl:flex-row xl:items-end gap-4 bg-slate-900/95 p-3.5 rounded-xl border border-slate-700">
+        <div class="flex flex-wrap gap-3 items-start shrink-0">
+          <div class="w-full sm:w-auto">
+            <label for="modeSelect" class="block text-xs uppercase tracking-wider text-sky-400 font-bold mb-1">Modalità di Analisi</label>
+            <select id="modeSelect" class="w-full bg-slate-800 text-white text-sm font-bold rounded-lg px-3 py-2 border border-sky-500/50 focus:outline-none">
+              <option value="cop" selected>COP Puntuale (35°C → Max LWT)</option>
+              <option value="scop">SCOP Stagionale EN14825 (35°C → 55°C)</option>
+            </select>
+          </div>
+          <div id="tambBox" class="w-full sm:w-auto transition-opacity">
+            <label for="tambSelect" class="block text-xs uppercase tracking-wider text-slate-300 font-bold mb-1">Temp. Esterna (Tamb)</label>
+            <select id="tambSelect" class="w-full bg-slate-800 text-white text-sm font-semibold rounded-lg px-3 py-2 border border-slate-700 focus:outline-none"></select>
+          </div>
         </div>
-        <div id="tambBox" class="w-full sm:w-auto transition-opacity">
-          <label for="tambSelect" class="block text-xs uppercase tracking-wider text-slate-300 font-bold mb-1">Temp. Esterna (Tamb)</label>
-          <select id="tambSelect" class="w-full bg-slate-800 text-white text-sm font-semibold rounded-lg px-3 py-2 border border-slate-700 focus:outline-none"></select>
+
+        <div class="flex-1 min-w-0 pt-3 xl:pt-0 xl:pl-4 border-t xl:border-t-0 xl:border-l border-slate-700" role="group" aria-labelledby="sizeSelectorsTitle">
+          <span id="sizeSelectorsTitle" class="block text-xs uppercase tracking-wider text-slate-300 font-bold mb-1">Taglie Databook a Confronto</span>
+          <div id="sizeSelectors" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-x-3 gap-y-2"></div>
         </div>
       </div>
     </header>
@@ -117,38 +125,29 @@
       </div>
     </section>
 
-    <!-- TEMPERATURA DI MANDATA E TAGLIE -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-      <section class="card-glass rounded-2xl p-6 lg:col-span-2 flex flex-col justify-between" aria-label="Temperatura di mandata">
-        <div>
-          <div class="flex flex-wrap justify-between items-center gap-3 mb-2">
-            <div>
-              <label for="lwtSlider" class="text-lg font-extrabold text-white">Temperatura di Mandata Acqua (LWT / LWC)</label>
-              <p id="scopWarningBanner" class="hidden text-xs text-amber-400 mt-1">⚠️ Nota Normativa EN 14825: lo SCOP è certificato nei databook solo a 35°C e 55°C. Tra i due valori è interpolato, oltre 55°C viene mostrata la stima stagionale estrapolata (tratteggiata).</p>
-            </div>
-            <div class="flex items-baseline gap-3">
-              <output id="lwtDisplay" for="lwtSlider" class="text-5xl font-black text-sky-400"></output>
-              <span id="emitterBadge" class="text-xs font-bold px-3 py-1 rounded-full border"></span>
-            </div>
+    <!-- TEMPERATURA DI MANDATA -->
+    <section class="card-glass rounded-2xl p-6 flex flex-col justify-between" aria-label="Temperatura di mandata">
+      <div>
+        <div class="flex flex-wrap justify-between items-center gap-3 mb-2">
+          <div>
+            <label for="lwtSlider" class="text-lg font-extrabold text-white">Temperatura di Mandata Acqua (LWT / LWC)</label>
+            <p id="scopWarningBanner" class="hidden text-xs text-amber-400 mt-1">⚠️ Nota Normativa EN 14825: lo SCOP è certificato nei databook solo a 35°C e 55°C. Tra i due valori è interpolato, oltre 55°C viene mostrata la stima stagionale estrapolata (tratteggiata).</p>
           </div>
-
-          <input id="lwtSlider" type="range" step="1" class="w-full h-4 bg-slate-700 rounded-lg cursor-pointer my-4">
-          <div id="lwtTicks" class="relative hidden sm:block h-9 mx-2 text-xs font-bold" aria-hidden="true"></div>
+          <div class="flex items-baseline gap-3">
+            <output id="lwtDisplay" for="lwtSlider" class="text-5xl font-black text-sky-400"></output>
+            <span id="emitterBadge" class="text-xs font-bold px-3 py-1 rounded-full border"></span>
+          </div>
         </div>
 
-        <div class="mt-5 pt-4 border-t border-slate-800 flex flex-wrap gap-2 items-center justify-between">
-          <span class="text-xs text-slate-300 font-bold">Salta a LWT:</span>
-          <div id="lwtJumps" class="flex flex-wrap gap-1.5"></div>
-        </div>
-      </section>
+        <input id="lwtSlider" type="range" step="1" class="w-full h-4 bg-slate-700 rounded-lg cursor-pointer my-4">
+        <div id="lwtTicks" class="relative hidden sm:block h-9 lg:h-12 mx-2 text-xs font-bold" aria-hidden="true"></div>
+      </div>
 
-      <section class="card-glass rounded-2xl p-6 space-y-2.5" aria-label="Taglie a confronto">
-        <h3 class="text-sm font-extrabold text-white border-b border-slate-800 pb-2">Taglie Databook a Confronto</h3>
-        <div id="sizeSelectors" class="grid grid-cols-1 sm:grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1.5 sm:gap-y-2.5 text-xs"></div>
-      </section>
-
-    </div>
+      <div class="mt-5 pt-4 border-t border-slate-800 flex flex-wrap gap-2 items-center justify-between">
+        <span class="text-xs text-slate-300 font-bold">Salta a LWT:</span>
+        <div id="lwtJumps" class="flex flex-wrap gap-1.5"></div>
+      </div>
+    </section>
 
     <!-- KPI DELLE POMPE DI CALORE -->
     <section id="kpiContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4" aria-live="polite" aria-label="Risultati per modello"></section>
@@ -159,7 +158,7 @@
       <section class="card-glass rounded-2xl p-6 lg:col-span-2">
         <div class="mb-4">
           <h2 id="mainChartTitle" class="text-lg font-bold text-white"></h2>
-          <p class="text-xs text-slate-400">La linea rossa tratteggiata rappresenta il COP di Bivalenza: sopra conviene la PdC, sotto conviene il Gas Metano</p>
+          <p class="text-xs text-slate-400">La linea bianca tratteggiata rappresenta il COP di Bivalenza: sopra conviene la PdC, sotto conviene il Gas Metano</p>
         </div>
         <div class="relative h-96">
           <canvas id="copChart" role="img" aria-label="Curve di efficienza in funzione della temperatura di mandata"></canvas>
@@ -183,7 +182,7 @@
     <section class="card-glass rounded-2xl p-6">
       <div class="mb-4">
         <h2 class="text-lg font-bold text-white">Riepilogo Stagionale Certificato (SCOP 35°C vs 55°C) & Risparmio Annuo in Bolletta (% e €/anno)</h2>
-        <p class="text-xs text-slate-400">Valori ufficiali EN 14825 (Clima Medio) estratti dai databook Daikin applicati al tuo consumo annuo di metano</p>
+        <p class="text-xs text-slate-400">Valori ufficiali EN 14825 (Clima Medio) estratti dai databook <span data-named="Daikin" data-anonymous="del costruttore">Daikin</span> applicati al tuo consumo annuo di metano</p>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
@@ -205,8 +204,13 @@
       </div>
     </section>
 
-    <footer class="text-center text-xs text-slate-500 pb-2">
-      Valori di COP/SCOP da databook Daikin; curve intermedie e correzioni per Tamb sono stime. Metodo di calcolo descritto in <a class="underline hover:text-slate-300" href="https://github.com/DinamoTechIT/Dashboard-COP-SCOP-Convenienza-Economica-PdC-vs-Metano/blob/main/docs/metodologia.md">docs/metodologia.md</a>.
+    <footer class="text-center text-xs text-slate-500 pb-2 space-y-3">
+      <p>Valori di COP/SCOP da databook <span data-named="Daikin" data-anonymous="del costruttore">Daikin</span>; curve intermedie e correzioni per Tamb sono stime. Metodo di calcolo descritto in <a class="underline hover:text-slate-300" href="https://github.com/DinamoTechIT/Dashboard-COP-SCOP-Convenienza-Economica-PdC-vs-Metano/blob/main/docs/metodologia.md">docs/metodologia.md</a>.</p>
+      <label class="inline-flex items-center gap-2 cursor-pointer select-none hover:text-slate-300">
+        <input id="anonymousToggle" type="checkbox" class="peer sr-only">
+        <span class="relative w-8 h-4 rounded-full bg-slate-700 transition peer-checked:bg-sky-600 peer-focus-visible:ring-2 peer-focus-visible:ring-sky-400 after:absolute after:top-0.5 after:left-0.5 after:w-3 after:h-3 after:rounded-full after:bg-slate-300 after:transition peer-checked:after:translate-x-4" aria-hidden="true"></span>
+        Nomi generici dei modelli
+      </label>
     </footer>
 
   </main>

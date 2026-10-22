@@ -2,6 +2,7 @@
 
 import { getEmitterBand } from '../data/emitters.js';
 import { formatEuro, formatNumber } from './format.js';
+import { seriesName } from './labels.js';
 
 const $ = id => document.getElementById(id);
 
@@ -43,11 +44,11 @@ function describeLimit({ maxConvenientLwt, model }) {
   return `<span class="text-amber-300 font-bold">Fino a ${maxConvenientLwt}°C</span>`;
 }
 
-export function renderBivalenceSummary({ energy, models }) {
+export function renderBivalenceSummary({ inputs, energy, models }) {
   $('bivalenceSummaryBox').innerHTML = `
     <div class="font-bold text-amber-300 mb-1.5 text-xs">📌 Temperatura LWT massima prima di andare in perdita rispetto al Metano (COP Biv = ${formatNumber(energy.bivalentCop, 2)}):</div>
     <div class="grid grid-cols-2 gap-1.5 text-xs">
-      ${models.map(m => `<div><strong style="color:${m.series.color}">${m.series.name}:</strong> ${describeLimit(m)}</div>`).join('')}
+      ${models.map(m => `<div><strong style="color:${m.series.color}">${seriesName(m.series, inputs.anonymous)}:</strong> ${describeLimit(m)}</div>`).join('')}
     </div>
   `;
 }

@@ -5,9 +5,11 @@ import { INDOOR_TEMPERATURE } from '../data/climate.js';
 import { LWT_AXIS } from '../core/dashboard.js';
 import { SCOP_CERTIFIED_LWT } from '../core/efficiency.js';
 import { formatNumber, formatSignedEuro, formatSignedPercent } from './format.js';
+import { modelLabel, seriesName } from './labels.js';
 
-const BIVALENCE_COLOR = '#f43f5e';
-const GAS_COLOR = '#ef4444';
+// Soglia e caldaia in colori neutri, distinti da quelli delle serie (EPSK è rossa).
+const BIVALENCE_COLOR = '#f8fafc';
+const GAS_COLOR = '#94a3b8';
 const OUT_OF_RANGE_COLOR = 'rgba(100, 116, 139, 0.25)';
 const AXIS_COLOR = '#94a3b8';
 const GRID_COLOR = 'rgba(148, 163, 184, 0.1)';
@@ -40,8 +42,8 @@ function efficiencyAxisRange(datasets, bivalentCop) {
 
 function buildEfficiencyDatasets({ inputs, energy, models }) {
   const extrapolatedFrom = SCOP_CERTIFIED_LWT[1];
-  const datasets = models.map(({ series, model, curve }) => ({
-    label: model.label,
+  const datasets = models.map(({ series, sizeKey, curve }) => ({
+    label: modelLabel(series, sizeKey, inputs.anonymous),
     data: curve,
     borderColor: series.color,
     backgroundColor: series.color,
@@ -60,7 +62,7 @@ function buildEfficiencyDatasets({ inputs, energy, models }) {
     label: `COP di Bivalenza (${formatNumber(bivalentCop, 2)}) - Pareggio vs Gas`,
     data: LWT_AXIS.map(() => bivalentCop),
     borderColor: BIVALENCE_COLOR,
-    backgroundColor: 'rgba(244, 63, 94, 0.1)',
+    backgroundColor: 'rgba(248, 250, 252, 0.1)',
     borderWidth: 2.5,
     borderDash: [8, 4],
     pointRadius: 0,
@@ -160,7 +162,10 @@ function updateCostChart(chart, { inputs, energy, models }) {
     `Spesa annua a LWT ${inputs.lwt}°C per ${formatNumber(inputs.gasYearlySm3)} Sm³ di gas (${formatNumber(energy.yearlyThermalKwh)} kWht/anno)`;
 
   const [dataset] = chart.data.datasets;
-  chart.data.labels = ['Caldaia Gas', ...models.map(m => (m.savings ? m.series.name : [m.series.name, 'fuori range']))];
+  chart.data.labels = ['Caldaia Gas', ...models.map(m => {
+    const name = seriesName(m.series, inputs.anonymous);
+    return m.savings ? name : [name, 'fuori range'];
+  })];
   dataset.data = [Math.round(energy.yearlyGasCost), ...models.map(m => (m.savings ? Math.round(m.savings.yearlyCost) : null))];
   dataset.backgroundColor = [GAS_COLOR, ...models.map(m => (m.savings ? m.series.color : OUT_OF_RANGE_COLOR))];
   chart.update();

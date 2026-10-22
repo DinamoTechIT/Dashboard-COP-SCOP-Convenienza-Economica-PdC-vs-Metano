@@ -1,7 +1,9 @@
 // Card riassuntive per ciascuna pompa di calore alla mandata selezionata.
 
+import { PRICE_LEVEL_MAX, getTemperatureClass } from '../data/heat-pumps.js';
 import { getScopSource } from '../core/efficiency.js';
 import { formatEuro, formatNumber, formatSignedEuro, formatSignedPercent } from './format.js';
+import { seriesName } from './labels.js';
 
 const SCOP_LABELS = {
   certified: 'SCOP',
@@ -13,21 +15,56 @@ export function getEfficiencyLabel(mode, lwt) {
   return mode === 'scop' ? SCOP_LABELS[getScopSource(lwt)] : 'COP';
 }
 
+function renderBanknote(filled) {
+  return `
+    <svg viewBox="0 0 24 14" class="w-4 h-2.5 xl:w-5 xl:h-3 ${filled ? 'text-emerald-300' : 'text-slate-600'}" aria-hidden="true">
+      <rect x="0.75" y="0.75" width="22.5" height="12.5" rx="2" fill="currentColor" fill-opacity="${filled ? 0.25 : 0}" stroke="currentColor" stroke-width="1.5"/>
+      <circle cx="12" cy="7" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    </svg>
+  `;
+}
+
+// Fascia di prezzo indicativa: banconote piene fino al livello della serie, vuote fino al fondo scala.
+function renderPriceLevel(level) {
+  return `
+    <span class="flex items-center gap-1" role="img" aria-label="Fascia di prezzo ${level} su ${PRICE_LEVEL_MAX}" title="Fascia di prezzo indicativa: ${level} su ${PRICE_LEVEL_MAX}">
+      <span class="text-slate-400 font-semibold mr-0.5">Prezzo</span>
+      ${Array.from({ length: PRICE_LEVEL_MAX }, (_, i) => renderBanknote(i < level)).join('')}
+    </span>
+  `;
+}
+
+// Intestazione comune: serie, stato, tipologia, temperatura massima del modello e fascia di prezzo.
+function renderCardHeader(series, model, anonymous, statusBadge, muted = false) {
+  const nameStyle = muted ? 'class="text-sm font-black uppercase px-2.5 py-0.5 rounded bg-slate-800 text-slate-400"'
+    : `class="text-sm font-black uppercase px-2.5 py-0.5 rounded" style="background:${series.bgLight}; color:${series.color}"`;
+  // Tipologia e Tmax nel colore della serie (grigio se il modello è fuori range).
+  const accentClass = muted ? 'text-slate-400' : '';
+  const accentStyle = muted ? '' : `style="color:${series.color}"`;
+  return `
+    <div class="flex justify-between items-start gap-2">
+      <span ${nameStyle}>${seriesName(series, anonymous)}</span>
+      ${statusBadge}
+    </div>
+    <h4 class="text-xs mt-2 font-bold ${accentClass}" ${accentStyle}>${getTemperatureClass(series).label}</h4>
+    <div class="mt-1 flex flex-wrap justify-between items-center gap-x-2 gap-y-1 text-[11px]">
+      <span class="text-slate-400 font-semibold">T<sub>max</sub> <strong class="${accentClass}" ${accentStyle}>${model.maxLWT}°C</strong></span>
+      ${renderPriceLevel(series.priceLevel)}
+    </div>
+  `;
+}
+
 function renderActiveCard({ series, model, efficiency, savings }, { inputs, energy }) {
   const positive = savings.savingPct >= 0;
 
   return `
     <article class="card-glass rounded-2xl p-4 border-t-4 flex flex-col justify-between transition hover:scale-[1.01]" style="border-top-color: ${series.color}">
       <div>
-        <div class="flex justify-between items-start">
-          <div>
-            <span class="text-sm font-black uppercase px-2.5 py-0.5 rounded" style="background:${series.bgLight}; color:${series.color}">${series.name}</span>
-            <h4 class="text-xs text-slate-300 mt-1.5 font-bold">${model.label}</h4>
-          </div>
-          <span class="text-xs px-2 py-0.5 rounded font-bold border ${savings.isConvenient ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-rose-500/20 text-rose-300 border-rose-500/40'}">
+        ${renderCardHeader(series, model, inputs.anonymous, `
+          <span class="shrink-0 text-xs px-2 py-0.5 rounded font-bold border ${savings.isConvenient ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-rose-500/20 text-rose-300 border-rose-500/40'}">
             ${savings.isConvenient ? '✓ Conveniente' : '✗ Sotto Biv.'}
           </span>
-        </div>
+        `)}
 
         <div class="mt-3 flex items-baseline justify-between border-b border-slate-800 pb-3">
           <div>
@@ -65,12 +102,10 @@ function renderActiveCard({ series, model, efficiency, savings }, { inputs, ener
 function renderOutOfRangeCard({ series, model }, { inputs }) {
   return `
     <article class="card-glass rounded-2xl p-4 border-t-4 border-t-slate-700 opacity-55 bg-slate-900/40 flex flex-col justify-between">
-      <div class="flex justify-between items-start">
-        <div>
-          <span class="text-sm font-black uppercase px-2.5 py-0.5 rounded bg-slate-800 text-slate-400">${series.name}</span>
-          <h4 class="text-xs text-slate-400 mt-1.5 font-bold">${model.label}</h4>
-        </div>
-        <span class="text-xs text-rose-400 bg-rose-950/60 border border-rose-800 px-2 py-0.5 rounded font-bold">Max ${model.maxLWT}°C</span>
+      <div>
+        ${renderCardHeader(series, model, inputs.anonymous, `
+          <span class="shrink-0 text-xs text-rose-400 bg-rose-950/60 border border-rose-800 px-2 py-0.5 rounded font-bold">✗ Fuori range</span>
+        `, true)}
       </div>
       <div class="my-auto py-8 text-center">
         <div class="text-base text-rose-400 font-black uppercase">Fuori Range Operativo</div>

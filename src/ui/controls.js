@@ -2,12 +2,19 @@
 
 import { AMBIENT_CONDITIONS } from '../data/climate.js';
 import { EMITTER_MARKS } from '../data/emitters.js';
-import { HEAT_PUMP_SERIES, LWT_MAX, LWT_MIN, getDefaultSizes, getSeriesMaxLwt } from '../data/heat-pumps.js';
+import {
+  HEAT_PUMP_SERIES, LWT_MAX, LWT_MIN, getDefaultSizes, getSeriesMaxLwt, getTemperatureClass
+} from '../data/heat-pumps.js';
 import { DEFAULT_INPUTS, GAS_CONSUMPTION_PRESETS, GAS_LHV_KWH_PER_SM3, PV_PRESETS, TARIFF_PRESETS } from '../data/presets.js';
 import { normalizeBoilerEfficiency, normalizePvShare, positiveOr } from '../core/economics.js';
 import { formatNumber } from './format.js';
+import { seriesName, sizeLabel } from './labels.js';
 
 const $ = id => document.getElementById(id);
+
+// Preferenza "nomi generici" ricordata dal browser; ?anonimo nell'indirizzo la attiva comunque.
+const ANONYMOUS_STORAGE_KEY = 'dashboard-pdc:nomi-generici';
+const ANONYMOUS_URL_PARAM = 'anonimo';
 
 const near = (a, b) => Math.abs(a - b) < 1e-6;
 
@@ -47,7 +54,7 @@ const PRESET_GROUPS = [
   }
 ];
 
-// Tacche dello slider: terminali di emissione + mandata massima di ciascuna serie.
+// Tacche dello slider: terminali di emissione + mandata massima di ciascuna categoria di PdC.
 function getLwtMarks() {
   const seriesByMax = new Map();
   HEAT_PUMP_SERIES.forEach(series => {
@@ -56,7 +63,8 @@ function getLwtMarks() {
   });
   const maxMarks = [...seriesByMax].map(([lwt, list]) => ({
     lwt,
-    label: `Max ${list.map(s => s.name).join('/')}`,
+    label: 'Max PdC',
+    sublabel: [...new Set(list.map(s => getTemperatureClass(s).short))].join(' / '),
     color: list[0].color
   }));
   return [...EMITTER_MARKS, ...maxMarks].sort((a, b) => a.lwt - b.lwt);
@@ -92,7 +100,7 @@ function buildLwtControls() {
     const translate = i === 0 ? '' : (i === marks.length - 1 ? '-translate-x-full text-right' : '-translate-x-1/2 text-center');
     return `
       <span class="absolute top-0 whitespace-nowrap ${translate}" style="left:${((mark.lwt - LWT_MIN) / span) * 100}%; color:${mark.color}">
-        ${mark.lwt}°C<span class="hidden lg:block text-[10px] font-semibold opacity-80">${mark.label}</span>
+        ${mark.lwt}°C<span class="hidden lg:block text-[10px] leading-tight font-semibold opacity-80">${mark.label}${mark.sublabel ? `<br>${mark.sublabel}` : ''}</span>
       </span>
     `;
   }).join('');
@@ -100,23 +108,60 @@ function buildLwtControls() {
   $('lwtJumps').innerHTML = marks.map(mark => `
     <button type="button" data-lwt="${mark.lwt}" style="color:${mark.color}"
       class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700">
-      ${mark.lwt}°C (${mark.label})
+      ${mark.lwt}°C (${mark.label}${mark.sublabel ? ` ${mark.sublabel}` : ''})
     </button>
   `).join('');
 }
 
+// I testi di etichette e opzioni sono scritti da applyNaming (commerciali o generici).
 function buildSizeSelectors() {
-  $('sizeSelectors').innerHTML = HEAT_PUMP_SERIES.map((series, i) => {
-    const models = Object.entries(series.sizes);
-    const mixedMaxLwt = new Set(models.map(([, m]) => m.maxLWT)).size > 1;
-    const options = models.map(([sizeKey, m]) =>
-      `<option value="${sizeKey}">${m.label}${mixedMaxLwt ? ` – Max ${m.maxLWT}°C` : ''}</option>`
-    ).join('');
-    return `
-      <label for="size_${series.id}" class="font-bold" style="color:${series.color}">${i + 1}. ${series.name} (${series.selectorLabel}):</label>
-      <select id="size_${series.id}" class="w-full bg-slate-800 text-white font-semibold rounded-lg px-2.5 py-1.5 border border-slate-700">${options}</select>
-    `;
-  }).join('');
+  $('sizeSelectors').innerHTML = HEAT_PUMP_SERIES.map(series => `
+    <div class="min-w-0">
+      <label for="size_${series.id}" class="block truncate text-xs font-bold mb-1"></label>
+      <select id="size_${series.id}" class="w-full bg-slate-800 text-white text-xs font-semibold rounded-lg px-2 py-2 border border-slate-700 focus:outline-none" style="border-left: 3px solid ${series.color}">
+        ${Object.keys(series.sizes).map(sizeKey => `<option value="${sizeKey}"></option>`).join('')}
+      </select>
+    </div>
+  `).join('');
+}
+
+function readAnonymousPreference() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.has(ANONYMOUS_URL_PARAM)) return params.get(ANONYMOUS_URL_PARAM) !== '0';
+  try {
+    return localStorage.getItem(ANONYMOUS_STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function saveAnonymousPreference(anonymous) {
+  try {
+    localStorage.setItem(ANONYMOUS_STORAGE_KEY, anonymous ? '1' : '0');
+  } catch {
+    // Archiviazione non disponibile (navigazione privata): la scelta vale solo per questa visita.
+  }
+}
+
+// Nomi commerciali o generici nei testi fissi della pagina e nei selettori delle taglie.
+function applyNaming(anonymous) {
+  document.querySelectorAll('[data-named]').forEach(el => {
+    el.textContent = anonymous ? el.dataset.anonymous : el.dataset.named;
+  });
+  $('seriesList').textContent = HEAT_PUMP_SERIES.map(s => seriesName(s, anonymous)).join(' • ');
+
+  HEAT_PUMP_SERIES.forEach(series => {
+    const description = anonymous ? getTemperatureClass(series).short : series.selectorLabel;
+    const label = document.querySelector(`label[for="size_${series.id}"]`);
+    label.innerHTML = `<span style="color:${series.color}">${seriesName(series, anonymous)}</span>
+      <span class="text-slate-400 font-semibold">${description}</span>`;
+    label.title = `${seriesName(series, anonymous)} (${description})`;
+
+    // La Tmax del modello scelto è indicata nella card, non serve ripeterla nelle opzioni.
+    [...$(`size_${series.id}`).options].forEach(option => {
+      option.textContent = sizeLabel(series, option.value, anonymous);
+    });
+  });
 }
 
 function applyDefaults() {
@@ -131,10 +176,10 @@ function applyDefaults() {
   Object.entries(getDefaultSizes()).forEach(([seriesId, sizeKey]) => {
     $(`size_${seriesId}`).value = sizeKey;
   });
+  $('anonymousToggle').checked = readAnonymousPreference();
 }
 
 export function initControls({ onChange }) {
-  $('seriesList').textContent = HEAT_PUMP_SERIES.map(s => s.name).join(' • ');
   $('gasLhvDisplay').textContent = formatNumber(GAS_LHV_KWH_PER_SM3, 1);
 
   buildAmbientSelect();
@@ -142,6 +187,8 @@ export function initControls({ onChange }) {
   buildLwtControls();
   buildSizeSelectors();
   applyDefaults();
+
+  $('anonymousToggle').addEventListener('change', event => saveAnonymousPreference(event.target.checked));
 
   const root = document.querySelector('main');
   root.addEventListener('input', onChange);
@@ -171,11 +218,15 @@ export function readInputs() {
     boilerEfficiency: normalizeBoilerEfficiency($('boilerEff').value),
     elecPrice: positiveOr($('elecPrice').value, DEFAULT_INPUTS.elecPrice),
     pvShare: normalizePvShare($('pvShare').value),
-    sizes: Object.fromEntries(HEAT_PUMP_SERIES.map(s => [s.id, $(`size_${s.id}`).value]))
+    sizes: Object.fromEntries(HEAT_PUMP_SERIES.map(s => [s.id, $(`size_${s.id}`).value])),
+    anonymous: $('anonymousToggle').checked
   };
 }
 
-// Allinea lo stato visivo dei controlli ai valori correnti (preset evidenziati, Tamb disattivata in SCOP).
+let appliedNaming = null;
+
+// Allinea lo stato visivo dei controlli ai valori correnti (preset evidenziati, Tamb disattivata in SCOP,
+// nomi commerciali o generici).
 export function syncControls(inputs) {
   PRESET_GROUPS.forEach(group => {
     group.presets.forEach(p => {
@@ -189,4 +240,9 @@ export function syncControls(inputs) {
   const seasonal = inputs.mode === 'scop';
   $('tambSelect').disabled = seasonal;
   $('tambBox').classList.toggle('opacity-40', seasonal);
+
+  if (appliedNaming !== inputs.anonymous) {
+    applyNaming(inputs.anonymous);
+    appliedNaming = inputs.anonymous;
+  }
 }
