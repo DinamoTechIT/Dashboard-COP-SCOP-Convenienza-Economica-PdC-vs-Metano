@@ -116,10 +116,12 @@ function buildLwtControls() {
 // I testi di etichette e opzioni sono scritti da applyNaming (commerciali o generici).
 function buildSizeSelectors() {
   $('sizeSelectors').innerHTML = HEAT_PUMP_SERIES.map(series => `
-    <label for="size_${series.id}" class="font-bold" style="color:${series.color}"></label>
-    <select id="size_${series.id}" class="w-full bg-slate-800 text-white font-semibold rounded-lg px-2.5 py-1.5 border border-slate-700">
-      ${Object.keys(series.sizes).map(sizeKey => `<option value="${sizeKey}"></option>`).join('')}
-    </select>
+    <div class="min-w-0">
+      <label for="size_${series.id}" class="block truncate text-xs font-bold mb-1"></label>
+      <select id="size_${series.id}" class="w-full bg-slate-800 text-white text-xs font-semibold rounded-lg px-2 py-2 border border-slate-700 focus:outline-none" style="border-left: 3px solid ${series.color}">
+        ${Object.keys(series.sizes).map(sizeKey => `<option value="${sizeKey}"></option>`).join('')}
+      </select>
+    </div>
   `).join('');
 }
 
@@ -148,15 +150,16 @@ function applyNaming(anonymous) {
   });
   $('seriesList').textContent = HEAT_PUMP_SERIES.map(s => seriesName(s, anonymous)).join(' • ');
 
-  HEAT_PUMP_SERIES.forEach((series, i) => {
+  HEAT_PUMP_SERIES.forEach(series => {
     const description = anonymous ? getTemperatureClass(series).short : series.selectorLabel;
-    document.querySelector(`label[for="size_${series.id}"]`).textContent =
-      `${i + 1}. ${seriesName(series, anonymous)} (${description}):`;
+    const label = document.querySelector(`label[for="size_${series.id}"]`);
+    label.innerHTML = `<span style="color:${series.color}">${seriesName(series, anonymous)}</span>
+      <span class="text-slate-400 font-semibold">${description}</span>`;
+    label.title = `${seriesName(series, anonymous)} (${description})`;
 
-    const mixedMaxLwt = new Set(Object.values(series.sizes).map(m => m.maxLWT)).size > 1;
+    // La Tmax del modello scelto è indicata nella card, non serve ripeterla nelle opzioni.
     [...$(`size_${series.id}`).options].forEach(option => {
-      const { maxLWT } = series.sizes[option.value];
-      option.textContent = `${sizeLabel(series, option.value, anonymous)}${mixedMaxLwt ? ` – Max ${maxLWT}°C` : ''}`;
+      option.textContent = sizeLabel(series, option.value, anonymous);
     });
   });
 }
