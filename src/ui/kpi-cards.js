@@ -37,14 +37,17 @@ function renderPriceLevel(level) {
 function renderCardHeader(series, model, statusBadge, muted = false) {
   const nameStyle = muted ? 'class="text-sm font-black uppercase px-2.5 py-0.5 rounded bg-slate-800 text-slate-400"'
     : `class="text-sm font-black uppercase px-2.5 py-0.5 rounded" style="background:${series.bgLight}; color:${series.color}"`;
+  // Tipologia e Tmax nel colore della serie (grigio se il modello è fuori range).
+  const accentClass = muted ? 'text-slate-400' : '';
+  const accentStyle = muted ? '' : `style="color:${series.color}"`;
   return `
     <div class="flex justify-between items-start gap-2">
       <span ${nameStyle}>${series.name}</span>
       ${statusBadge}
     </div>
-    <h4 class="text-xs ${muted ? 'text-slate-400' : 'text-slate-300'} mt-2 font-bold">${series.typeLabel}</h4>
+    <h4 class="text-xs mt-2 font-bold ${accentClass}" ${accentStyle}>${series.typeLabel}</h4>
     <div class="mt-1 flex flex-wrap justify-between items-center gap-x-2 gap-y-1 text-[11px]">
-      <span class="text-slate-400 font-semibold">T<sub>max</sub> <strong class="${muted ? 'text-slate-400' : 'text-slate-200'}">${model.maxLWT}°C</strong></span>
+      <span class="text-slate-400 font-semibold">T<sub>max</sub> <strong class="${accentClass}" ${accentStyle}>${model.maxLWT}°C</strong></span>
       ${renderPriceLevel(series.priceLevel)}
     </div>
   `;
